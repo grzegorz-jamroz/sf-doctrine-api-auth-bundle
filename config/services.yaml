@@ -1,0 +1,15 @@
+services:
+  Ifrost\DoctrineApiBundle\Routing\AuthenticationSuccessEventSubscriber:
+    arguments:
+      $tokenClassName: '%ifrost_doctrine_api_auth.token_entity%'
+  Ifrost\DoctrineApiBundle\Routing\JWTAuthenticatedEventSubscriber:
+    arguments:
+      $tokenClassName: '%ifrost_doctrine_api_auth.token_entity%'
+  Ifrost\DoctrineApiBundle\Routing\JWTCreatedEventSubscriber:
+  Ifrost\DoctrineApiBundle\Action\LogoutAction:
+    arguments:
+      $tokenClassName: '%ifrost_doctrine_api_auth.token_entity%'
+  Ifrost\DoctrineApiBundle\Action\RefreshTokenAction:
+    arguments:
+      $tokenClassName: '%ifrost_doctrine_api_auth.token_entity%'
+      $userClassName: '%ifrost_doctrine_api_auth.user_entity%'

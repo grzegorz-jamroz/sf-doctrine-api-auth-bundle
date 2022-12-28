@@ -1,0 +1,4 @@
+services:
+  Ifrost\DoctrineApiAuthBundle\EventListener\ExceptionListener:
+    tags:
+      - { name: kernel.event_listener, event: kernel.exception }

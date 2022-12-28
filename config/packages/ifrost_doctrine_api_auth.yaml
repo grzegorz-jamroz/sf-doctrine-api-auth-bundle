@@ -1,0 +1,5 @@
+ifrost_doctrine_api_auth:
+  exception_listener: true
+
+ifrost_api:
+  exception_listener: false

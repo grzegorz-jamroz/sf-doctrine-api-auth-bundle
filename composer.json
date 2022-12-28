@@ -1,0 +1,24 @@
+{
+    "name": "grzegorz-jamroz/sf-doctrine-api-auth-bundle",
+    "description": "Bundle provides authorization for Symfony Doctrine Api bundle",
+    "authors": [
+        {
+            "name": "Grzegorz Jamróz",
+            "email": "grzegorz.jamrooz@gmail.com"
+        }
+    ],
+    "require": {
+        "grzegorz-jamroz/sf-doctrine-api-bundle": "^6.1",
+        "lexik/jwt-authentication-bundle": "^2.16"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Ifrost\\DoctrineApiAuthBundle\\Tests\\": "tests/"
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Ifrost\\DoctrineApiAuthBundle\\": "src/"
+        }
+    }
+}
