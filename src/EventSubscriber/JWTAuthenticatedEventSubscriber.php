@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Ifrost\DoctrineApiAuthBundle\EventSubscriber;
 
-use Doctrine\DBAL\Connection;
 use Ifrost\DoctrineApiBundle\Entity\EntityInterface;
 use Ifrost\DoctrineApiBundle\Query\Entity\EntityQuery;
+use Ifrost\DoctrineApiBundle\Utility\DbClient;
 use Lexik\Bundle\JWTAuthenticationBundle\Event\JWTAuthenticatedEvent;
 use Lexik\Bundle\JWTAuthenticationBundle\Events;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\InvalidTokenException;
@@ -16,8 +16,8 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 class JWTAuthenticatedEventSubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        private Connection $db,
         private string $tokenClassName,
+        private DbClient $db,
     ) {
     }
 

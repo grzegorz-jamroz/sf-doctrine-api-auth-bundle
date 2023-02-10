@@ -16,5 +16,5 @@ interface TokenInterface extends EntityInterface
 
     public function getDevice(): string;
 
-    public function getRefreshToken(): string;
+    public function getRefreshTokenUuid(): string;
 }

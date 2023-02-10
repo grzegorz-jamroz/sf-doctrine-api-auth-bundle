@@ -1,5 +1,21 @@
+# default values
 ifrost_doctrine_api_auth:
   exception_listener: true
+  token_entity: null
+  user_entity: null
+  return_user_in_body: false
+  return_refresh_token_in_body: false
+  ttl: 2592000
+  token_parameter_name: 'refreshToken'
+  refresh_token_action:
+    validate_jwt: false
+  cookie:
+    enabled: false
+    same_site: lax
+    path: /
+    domain: null
+    http_only: true
+    secure: true
 
 ifrost_api:
   exception_listener: false

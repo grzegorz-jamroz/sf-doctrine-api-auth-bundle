@@ -1,15 +1,93 @@
 services:
-  Ifrost\DoctrineApiBundle\Routing\AuthenticationSuccessEventSubscriber:
+  Ifrost\DoctrineApiBundle\Utility\DbClient:
+    arguments:
+      $connection: '@doctrine.dbal.default_connection'
+  ifrost_doctrine_api_auth.jws_provider.lcobucci:
+    class: Lexik\Bundle\JWTAuthenticationBundle\Services\JWSProvider\LcobucciJWSProvider
+    arguments:
+      $keyLoader: '@lexik_jwt_authentication.key_loader.raw'
+      $cryptoEngine: '%lexik_jwt_authentication.encoder.crypto_engine%'
+      $signatureAlgorithm: '%lexik_jwt_authentication.encoder.signature_algorithm%'
+      $ttl: '%ifrost_doctrine_api_auth.ttl%'
+      $clockSkew: '%lexik_jwt_authentication.clock_skew%'
+      $allowNoExpiration: '%lexik_jwt_authentication.allow_no_expiration%'
+
+  ifrost_doctrine_api_auth.extractor.refresh_token_extractor:
+    class: Ifrost\DoctrineApiAuthBundle\TokenExtractor\RefreshTokenExtractor
+    arguments:
+      - '%ifrost_doctrine_api_auth.token_parameter_name%'
+      - '@Ifrost\ApiBundle\Utility\ApiRequest'
+  ifrost_doctrine_api_auth.encoder.lcobucci:
+    class: Lexik\Bundle\JWTAuthenticationBundle\Encoder\LcobucciJWTEncoder
+    arguments:
+      - '@ifrost_doctrine_api_auth.jws_provider.lcobucci'
+  Ifrost\DoctrineApiAuthBundle\Generator\RefreshTokenGenerator:
+    arguments:
+      $jwsProvider: '@ifrost_doctrine_api_auth.jws_provider.lcobucci'
+  ifrost_doctrine_api_auth.refresh_token_generator:
+    alias: Ifrost\DoctrineApiAuthBundle\Generator\RefreshTokenGenerator
+  ifrost_doctrine_api_auth.payload.refresh_token_payload_factory:
+    alias: Ifrost\DoctrineApiAuthBundle\Payload\RefreshTokenPayloadFactory
+  ifrost_doctrine_api_auth.payload.jwt_payload_factory:
+    alias: Ifrost\DoctrineApiAuthBundle\Payload\JwtPayloadFactory
+
+  Ifrost\DoctrineApiAuthBundle\Routing\DoctrineApiAuthLoader:
+    tags: [routing.route_loader]
+  Ifrost\DoctrineApiAuthBundle\EventSubscriber\AuthenticationSuccessEventSubscriber:
+    tags: [kernel.event_subscriber]
+    arguments:
+      $ttl: '%ifrost_doctrine_api_auth.ttl%'
+      $tokenParameterName: '%ifrost_doctrine_api_auth.token_parameter_name%'
+      $tokenClassName: '%ifrost_doctrine_api_auth.token_entity%'
+      $returnUserInBody: '%ifrost_doctrine_api_auth.return_user_in_body%'
+      $returnRefreshTokenInBody: '%ifrost_doctrine_api_auth.return_refresh_token_in_body%'
+      $cookieSettings: '%ifrost_doctrine_api_auth.cookie%'
+      $jwtManager: '@lexik_jwt_authentication.jwt_manager'
+      $db: '@doctrine.dbal.default_connection'
+      $refreshTokenGenerator: '@ifrost_doctrine_api_auth.refresh_token_generator'
+      $refreshTokenEncoder: '@ifrost_doctrine_api_auth.encoder.lcobucci'
+  Ifrost\DoctrineApiAuthBundle\EventSubscriber\JWTAuthenticatedEventSubscriber:
+    tags: [kernel.event_subscriber]
     arguments:
       $tokenClassName: '%ifrost_doctrine_api_auth.token_entity%'
-  Ifrost\DoctrineApiBundle\Routing\JWTAuthenticatedEventSubscriber:
+      $db: '@Ifrost\DoctrineApiBundle\Utility\DbClient'
+  Ifrost\DoctrineApiAuthBundle\EventSubscriber\JWTCreatedEventSubscriber:
+    tags: [kernel.event_subscriber]
     arguments:
+      $ttl: '%lexik_jwt_authentication.token_ttl%'
+  Ifrost\DoctrineApiAuthBundle\Action\LogoutAction:
+    arguments:
+      $tokenParameterName: '%ifrost_doctrine_api_auth.token_parameter_name%'
+      $cookieSettings: '%ifrost_doctrine_api_auth.cookie%'
+      $requestStack: '@request_stack'
+      $db: '@Ifrost\DoctrineApiBundle\Utility\DbClient'
+      $tokenExtractor: '@lexik_jwt_authentication.extractor.chain_extractor'
+      $jwtManager: '@lexik_jwt_authentication.jwt_manager'
       $tokenClassName: '%ifrost_doctrine_api_auth.token_entity%'
-  Ifrost\DoctrineApiBundle\Routing\JWTCreatedEventSubscriber:
-  Ifrost\DoctrineApiBundle\Action\LogoutAction:
+  Ifrost\DoctrineApiAuthBundle\Action\RefreshTokenAction:
+    tags: [controller.service_arguments]
     arguments:
-      $tokenClassName: '%ifrost_doctrine_api_auth.token_entity%'
-  Ifrost\DoctrineApiBundle\Action\RefreshTokenAction:
-    arguments:
+      $ttl: '%ifrost_doctrine_api_auth.ttl%'
+      $tokenParameterName: '%ifrost_doctrine_api_auth.token_parameter_name%'
       $tokenClassName: '%ifrost_doctrine_api_auth.token_entity%'
       $userClassName: '%ifrost_doctrine_api_auth.user_entity%'
+      $validateJwt: '%ifrost_doctrine_api_auth.refresh_token_action.validate_jwt%'
+      $returnUserInBody: '%ifrost_doctrine_api_auth.return_user_in_body%'
+      $returnRefreshTokenInBody: '%ifrost_doctrine_api_auth.return_refresh_token_in_body%'
+      $cookieSettings: '%ifrost_doctrine_api_auth.cookie%'
+      $jwtPayloadFactory: '@ifrost_doctrine_api_auth.payload.jwt_payload_factory'
+      $refreshTokenPayloadFactory: '@ifrost_doctrine_api_auth.payload.refresh_token_payload_factory'
+      $refreshTokenEncoder: '@ifrost_doctrine_api_auth.encoder.lcobucci'
+      $db: '@Ifrost\DoctrineApiBundle\Utility\DbClient'
+      $dispatcher: '@event_dispatcher'
+      $jwtManager: '@lexik_jwt_authentication.jwt_manager'
+      $refreshTokenGenerator: '@ifrost_doctrine_api_auth.refresh_token_generator'
+  Ifrost\DoctrineApiAuthBundle\Payload\JwtPayloadFactory:
+    arguments:
+      $requestStack: '@request_stack'
+      $tokenExtractor: '@lexik_jwt_authentication.extractor.chain_extractor'
+      $jwsProvider: '@ifrost_doctrine_api_auth.jws_provider.lcobucci'
+  Ifrost\DoctrineApiAuthBundle\Payload\RefreshTokenPayloadFactory:
+    arguments:
+      $refreshTokenExtractor: '@ifrost_doctrine_api_auth.extractor.refresh_token_extractor'
+      $refreshTokenEncoder: '@ifrost_doctrine_api_auth.encoder.lcobucci'
