@@ -60,11 +60,9 @@ services:
     arguments:
       $tokenParameterName: '%ifrost_doctrine_api_auth.token_parameter_name%'
       $cookieSettings: '%ifrost_doctrine_api_auth.cookie%'
-      $requestStack: '@request_stack'
       $db: '@Ifrost\DoctrineApiBundle\Utility\DbClient'
-      $tokenExtractor: '@lexik_jwt_authentication.extractor.chain_extractor'
-      $jwtManager: '@lexik_jwt_authentication.jwt_manager'
       $tokenClassName: '%ifrost_doctrine_api_auth.token_entity%'
+      $jwtPayloadFactory: '@ifrost_doctrine_api_auth.payload.jwt_payload_factory'
   Ifrost\DoctrineApiAuthBundle\Action\RefreshTokenAction:
     tags: [controller.service_arguments]
     arguments:

@@ -76,6 +76,9 @@ security:
     refresh:
       pattern: ^/token/refresh
       stateless: true
+    logout:
+      pattern: ^/logout
+      stateless: true
     api:
       pattern: ^/
       stateless: true
@@ -89,6 +92,7 @@ security:
   access_control:
     - { path: ^/login,          roles: PUBLIC_ACCESS }
     - { path: ^/token/refresh,  roles: PUBLIC_ACCESS }
+    - { path: ^/logout,         roles: PUBLIC_ACCESS }
     - { path: ^/,               roles: IS_AUTHENTICATED_FULLY }
   # ...
 ```
