@@ -56,6 +56,7 @@ services:
     arguments:
       $ttl: '%lexik_jwt_authentication.token_ttl%'
   Ifrost\DoctrineApiAuthBundle\Action\LogoutAction:
+    tags: [controller.service_arguments]
     arguments:
       $tokenParameterName: '%ifrost_doctrine_api_auth.token_parameter_name%'
       $cookieSettings: '%ifrost_doctrine_api_auth.cookie%'
