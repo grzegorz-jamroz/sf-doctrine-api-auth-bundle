@@ -29,6 +29,7 @@ class IfrostDoctrineApiAuthExtension extends Extension
         $container->setParameter('ifrost_doctrine_api_auth.ttl', $config['ttl']);
         $container->setParameter('ifrost_doctrine_api_auth.token_parameter_name', $config['token_parameter_name']);
         $container->setParameter('ifrost_doctrine_api_auth.refresh_token_action.validate_jwt', $config['refresh_token_action']['validate_jwt']);
+        $container->setParameter('ifrost_doctrine_api_auth.refresh_token_action.after_get_user_data_subscriber', $config['refresh_token_action']['after_get_user_data_subscriber']);
         $container->setParameter('ifrost_doctrine_api_auth.return_user_in_body', $config['return_user_in_body']);
         $container->setParameter('ifrost_doctrine_api_auth.return_refresh_token_in_body', $config['return_refresh_token_in_body']);
         $container->setParameter('ifrost_doctrine_api_auth.cookie', $config['cookie'] ?? []);
@@ -44,6 +45,10 @@ class IfrostDoctrineApiAuthExtension extends Extension
         if (Transform::toBool($config['exception_listener'])) {
             $container->prependExtensionConfig('ifrost_api', ['exception_listener' => false]);
             $loader->load('exception_listener.yaml');
+        }
+
+        if (Transform::toBool($config['refresh_token_action']['after_get_user_data_subscriber'])) {
+            $loader->load('token_refresh_after_get_user_data_subscriber.yaml');
         }
     }
 

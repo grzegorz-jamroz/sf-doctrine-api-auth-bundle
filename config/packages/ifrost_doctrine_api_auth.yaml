@@ -9,6 +9,7 @@ ifrost_doctrine_api_auth:
   token_parameter_name: 'refreshToken'
   refresh_token_action:
     validate_jwt: false
+    after_get_user_data_subscriber: true
   cookie:
     enabled: false
     same_site: lax

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Ifrost\DoctrineApiAuthBundle\Action;
 
 use Ifrost\DoctrineApiAuthBundle\Entity\TokenInterface;
+use Ifrost\DoctrineApiAuthBundle\Event\TokenRefreshAfterGetUserDataEvent;
 use Ifrost\DoctrineApiAuthBundle\Event\TokenRefreshSuccessEvent;
 use Ifrost\DoctrineApiAuthBundle\Events;
 use Ifrost\DoctrineApiAuthBundle\Generator\RefreshTokenGeneratorInterface;
@@ -99,7 +100,11 @@ class RefreshTokenAction
     private function getUser(string $userUuid): UserInterface
     {
         try {
-            return $this->userClassName::createFromArray($this->db->fetchOne(EntityQuery::class, $this->userClassName::getTableName(), $userUuid));
+            $userData = $this->db->fetchOne(EntityQuery::class, $this->userClassName::getTableName(), $userUuid);
+            $event = new TokenRefreshAfterGetUserDataEvent($this->userClassName, $userData);
+            $this->dispatcher->dispatch($event, Events::TOKEN_REFRESH_AFTER_GET_USER_DATA);
+
+            return $this->userClassName::createFromArray($event->getData());
         } catch (\Exception) {
             throw new InvalidTokenException(sprintf('Invalid JWT Token - User "%s" does not exist', $userUuid));
         }
