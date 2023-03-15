@@ -349,6 +349,31 @@ class RefreshTokenActionTest extends TestCase
         $action->__invoke();
     }
 
+    public function testShouldThrowJWTDecodeFailureExceptionWhenOptionValidateJwtIsEnabledAndTokenIsNotVerified()
+    {
+        // Expect
+        $this->expectException(JWTDecodeFailureException::class);
+        $this->expectExceptionMessage('Unable to verify the given JWT through the given configuration. If the "lexik_jwt_authentication.encoder" encryption options have been changed since your last authentication, please renew the token. If the problem persists, verify that the configured keys/passphrase are valid.');
+
+        // Given
+        $request = new Request();
+        $data = $this->getActionData();
+        $request->headers->set('Authorization', sprintf('Bearer %s', 'invalid_token'));
+        $tokenExtractor = $this->createMock(TokenExtractorInterface::class);
+        $tokenExtractor->method('extract')->with($request)->willReturn('invalid_token');
+        $requestStack = new RequestStack();
+        $requestStack->push($request);
+        $jwsProvider = $this->createMock(JWSProviderInterface::class);
+        $jwsProvider->method('load')->with('invalid_token')->willReturn(new LoadedJWS([], false, false));
+        $jwtPayloadFactory = new JwtPayloadFactory($requestStack, $tokenExtractor, $jwsProvider);
+        $data['jwtPayloadFactory'] = $jwtPayloadFactory;
+        $data['validateJwt'] = true;
+        $action = RefreshTokenActionVariant::createFromArray($data);
+
+        // When & Then
+        $action->__invoke();
+    }
+
     private function getActionData(): array
     {
         $request = new Request();
