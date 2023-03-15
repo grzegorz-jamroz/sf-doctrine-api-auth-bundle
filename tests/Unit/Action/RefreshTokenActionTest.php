@@ -51,9 +51,8 @@ class RefreshTokenActionTest extends TestCase
     public function testShouldReturnResponseWithTokenAndRefreshTokenInBody()
     {
         // Given
-        $data = $this->getActionData([
-            'returnRefreshTokenInBody' => true,
-        ]);
+        $data = $this->getActionData();
+        $data['returnRefreshTokenInBody'] = true;
         $action = RefreshTokenActionVariant::createFromArray($data);
 
         // When
@@ -228,7 +227,7 @@ class RefreshTokenActionTest extends TestCase
         $action->__invoke();
     }
 
-    private function getActionData(array $data = []): array
+    private function getActionData(): array
     {
         $request = new Request();
         $newJwt = 'new_jwt_token';
@@ -307,7 +306,6 @@ class RefreshTokenActionTest extends TestCase
             'dispatcher' => $dispatcher,
             'jwtManager' => $jwtManager,
             'refreshTokenGenerator' => $refreshTokenGenerator,
-            ...$data,
         ];
     }
 }
