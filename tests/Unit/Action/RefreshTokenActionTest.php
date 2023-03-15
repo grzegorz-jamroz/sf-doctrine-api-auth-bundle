@@ -18,6 +18,7 @@ use Ifrost\DoctrineApiBundle\Utility\DbClient;
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\InvalidTokenException;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
+use Lexik\Bundle\JWTAuthenticationBundle\Exception\MissingTokenException;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWSProvider\JWSProviderInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTManager;
 use Lexik\Bundle\JWTAuthenticationBundle\Signature\LoadedJWS;
@@ -242,6 +243,29 @@ class RefreshTokenActionTest extends TestCase
             $this->throwException(new NotFoundException(sprintf('Record not found for query "%s"', EntityQuery::class), 404))
         );
         $data['db'] = $db;
+        $action = RefreshTokenActionVariant::createFromArray($data);
+
+        // When & Then
+        $action->__invoke();
+    }
+    
+    public function testShouldThrowMissingTokenExceptionWhenOptionValidateJwtIsEnabledAndTokenNotSent()
+    {
+        // Expect
+        $this->expectException(MissingTokenException::class);
+        $this->expectExceptionMessage('JWT Token not found');
+
+        // Given
+        $request = new Request();
+        $data = $this->getActionData();
+        $tokenExtractor = $this->createMock(TokenExtractorInterface::class);
+        $tokenExtractor->method('extract')->with(new Request())->willReturn(false);
+        $requestStack = new RequestStack();
+        $requestStack->push($request);
+        $jwsProvider = $this->createMock(JWSProviderInterface::class);
+        $jwtPayloadFactory = new JwtPayloadFactory($requestStack, $tokenExtractor, $jwsProvider);
+        $data['jwtPayloadFactory'] = $jwtPayloadFactory;
+        $data['validateJwt'] = true;
         $action = RefreshTokenActionVariant::createFromArray($data);
 
         // When & Then
