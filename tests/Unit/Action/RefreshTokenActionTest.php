@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Action;
 
 use Ifrost\DoctrineApiAuthBundle\Generator\RefreshTokenGeneratorInterface;
+use Ifrost\DoctrineApiAuthBundle\Payload\JwtPayloadFactory;
+use Ifrost\DoctrineApiAuthBundle\Payload\RefreshTokenPayloadFactory;
+use Ifrost\DoctrineApiAuthBundle\Query\FindTokenByRefreshTokenUuidQuery;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Action\RefreshTokenActionVariant;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity\Token;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity\User;
@@ -23,14 +26,34 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 class RefreshTokenActionTest extends TestCase
 {
-    public function testShouldReturnResponseWithTokenAndRefreshToken()
+    public function testShouldReturnResponseWithTokenInBody()
     {
         // Given
         $data = $this->getActionData();
+        $action = RefreshTokenActionVariant::createFromArray($data);
+
+        // When
+        $response = $action->__invoke();
+
+        // Then
+        $this->assertInstanceOf(JsonResponse::class, $response);
+        $this->assertEquals(
+            ['token' => 'new_jwt_token'],
+            json_decode($response->getContent(), true)
+        );
+    }
+
+    public function testShouldReturnResponseWithTokenAndRefreshTokenInBody()
+    {
+        // Given
+        $data = $this->getActionData([
+            'returnRefreshTokenInBody' => true,
+        ]);
         $action = RefreshTokenActionVariant::createFromArray($data);
 
         // When
@@ -80,12 +103,12 @@ class RefreshTokenActionTest extends TestCase
     {
         // Expect
         $this->expectException(InvalidTokenException::class);
-        $this->expectExceptionMessage('Invalid JWT Token');
+        $this->expectExceptionMessage('Invalid Refresh Token');
 
         // Given
         $data = $this->getActionData();
         $db = $this->createMock(DbClient::class);
-        $db->method('fetchOne')->with(EntityQuery::class, Token::getTableName(), '25feb06b-0c1e-4416-86fc-706134f2c7de')
+        $db->method('fetchOne')->with(FindTokenByRefreshTokenUuidQuery::class, Token::getTableName(), '60efd5f1-d831-4c02-863d-4ee11843fc2e')
             ->willThrowException(new NotFoundException(sprintf('Record not found for query "%s"', EntityQuery::class), 404));
         $data['db'] = $db;
         $action = RefreshTokenActionVariant::createFromArray($data);
@@ -184,7 +207,7 @@ class RefreshTokenActionTest extends TestCase
         $data = $this->getActionData();
         $db = $this->createMock(DbClient::class);
         $db->method('fetchOne')->withConsecutive(
-            [EntityQuery::class, Token::getTableName(), '25feb06b-0c1e-4416-86fc-706134f2c7de'],
+            [FindTokenByRefreshTokenUuidQuery::class, Token::getTableName(), '25feb06b-0c1e-4416-86fc-706134f2c7de'],
             [EntityQuery::class, User::getTableName(), '166f8006-b4aa-4df3-a9ea-58a3aae2492b']
         )->willReturnOnConsecutiveCalls(
             [
@@ -205,33 +228,42 @@ class RefreshTokenActionTest extends TestCase
         $action->__invoke();
     }
 
-    private function getActionData(): array
+    private function getActionData(array $data = []): array
     {
         $request = new Request();
-        $oldJwt = 'old_jwt_token';
         $newJwt = 'new_jwt_token';
-        $oldJwtUuid = '25feb06b-0c1e-4416-86fc-706134f2c7de';
-        $userUuid = '3fc713ae-f1b8-43a6-95d2-e6d573fab41a';
-        $currentRefreshToken = 'current_refresh_token';
-        $currentRefreshTokenDbHash = 'current_refresh_token_db_hash';
-        $newRefreshTokenDbHash = 'new_refresh_token_db_hash';
+        $newRefreshTokenUuid = 'new_refresh_token_db_hash';
         $newRefreshToken = 'new_refresh_token';
+
+        $userUuid = '3fc713ae-f1b8-43a6-95d2-e6d573fab41a';
         $userData = [
             'uuid' => $userUuid,
             'email' => 'tom.smith@email.com',
             'roles' => ['ROLE_USER'],
         ];
-        $tokenData = [
-            'uuid' => $oldJwtUuid,
+
+        $currentToken = 'current_token';
+        $currentTokenData = [
+            'uuid' => '25feb06b-0c1e-4416-86fc-706134f2c7de',
             'user_uuid' => $userUuid,
             'iat' => 1673457094,
             'exp' => 1673460694,
             'device' => '',
-            'refresh_token' => $currentRefreshTokenDbHash,
+            'refresh_token_uuid' => '60efd5f1-d831-4c02-863d-4ee11843fc2e',
         ];
-        $request->headers->set('Authorization', sprintf('Bearer %s', $oldJwt));
+
+        $currentRefreshToken = 'current_refresh_token';
+        $currentRefreshTokenData = [
+            'uuid' => '60efd5f1-d831-4c02-863d-4ee11843fc2e',
+            'user_uuid' => $userUuid,
+            'iat' => 1773457094,
+            'exp' => 1773460694,
+            'device' => '',
+        ];
+
+        $request->headers->set('Authorization', sprintf('Bearer %s', $currentToken));
         $tokenExtractor = $this->createMock(TokenExtractorInterface::class);
-        $tokenExtractor->method('extract')->with($request)->willReturn($oldJwt);
+        $tokenExtractor->method('extract')->with($request)->willReturn($currentToken);
         $refreshTokenExtractor = $this->createMock(RefreshTokenExtractorInterface::class);
         $refreshTokenExtractor->method('extract')->willReturn($currentRefreshToken);
         $refreshTokenEncoder = $this->createMock(JWTEncoderInterface::class);
@@ -240,18 +272,18 @@ class RefreshTokenActionTest extends TestCase
             [$newRefreshToken],
             [$newRefreshToken],
         )->willReturnOnConsecutiveCalls(
-            ['token' => $currentRefreshTokenDbHash],
-            ['token' => $newRefreshTokenDbHash],
-            ['token' => $newRefreshTokenDbHash],
+            $currentRefreshTokenData,
+            ['uuid' => $newRefreshTokenUuid],
+            ['uuid' => $newRefreshTokenUuid],
         );
         $dispatcher = $this->createMock(EventDispatcherInterface::class);
         $jwsProvider = $this->createMock(JWSProviderInterface::class);
-        $jwsProvider->method('load')->with($oldJwt)->willReturn(new LoadedJWS(['uuid' => $oldJwtUuid], true));
+        $jwsProvider->method('load')->with($currentToken)->willReturn(new LoadedJWS($currentTokenData, true));
         $db = $this->createMock(DbClient::class);
         $db->method('fetchOne')->withConsecutive(
-            [EntityQuery::class, Token::getTableName(), $oldJwtUuid],
+            [FindTokenByRefreshTokenUuidQuery::class, Token::getTableName(), $currentTokenData['refresh_token_uuid']],
             [EntityQuery::class, User::getTableName(), $userUuid]
-        )->willReturnOnConsecutiveCalls($tokenData, $userData);
+        )->willReturnOnConsecutiveCalls($currentTokenData, $userData);
         $jwtManager = $this->createMock(JWTManager::class);
         $jwtManager->method('create')->with(User::createFromArray($userData))->willReturn($newJwt);
         $jwtManager->method('parse')->with($newJwt)->willReturn([
@@ -262,17 +294,20 @@ class RefreshTokenActionTest extends TestCase
         ]);
         $refreshTokenGenerator = $this->createMock(RefreshTokenGeneratorInterface::class);
         $refreshTokenGenerator->method('generate')->willReturn($newRefreshToken);
+        $requestStack = new RequestStack();
+        $requestStack->push($request);
+        $jwtPayloadFactory = new JwtPayloadFactory($requestStack, $tokenExtractor, $jwsProvider);
+        $refreshTokenPayloadFactory = new RefreshTokenPayloadFactory($refreshTokenExtractor, $refreshTokenEncoder);
 
         return [
-            'request' => $request,
-            'tokenExtractor' => $tokenExtractor,
-            'refreshTokenExtractor' => $refreshTokenExtractor,
+            'jwtPayloadFactory' => $jwtPayloadFactory,
+            'refreshTokenPayloadFactory' => $refreshTokenPayloadFactory,
             'refreshTokenEncoder' => $refreshTokenEncoder,
             'db' => $db,
             'dispatcher' => $dispatcher,
-            'jwsProvider' => $jwsProvider,
             'jwtManager' => $jwtManager,
             'refreshTokenGenerator' => $refreshTokenGenerator,
+            ...$data,
         ];
     }
 }

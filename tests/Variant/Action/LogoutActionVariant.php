@@ -21,11 +21,9 @@ class LogoutActionVariant extends LogoutAction implements ArrayConstructable
         return new self(
             Transform::toString($data['tokenParameterName'] ?? 'refresh_token'),
             Transform::toArray($data['cookieSettings'] ?? []),
-            $data['requestStack'] ?? $requestStack,
             $data['db'],
-            $data['tokenExtractor'],
-            $data['jwtManager'],
             Transform::toString($data['tokenClassName'] ?? Token::class),
+            $data['jwtPayloadFactory'],
         );
     }
 }

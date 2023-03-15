@@ -4,17 +4,22 @@ declare(strict_types=1);
 
 namespace Action;
 
+use Ifrost\DoctrineApiAuthBundle\Payload\JwtPayloadFactory;
+use Ifrost\DoctrineApiAuthBundle\Payload\RefreshTokenPayloadFactory;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Action\LogoutActionVariant;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity\Token;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity\User;
 use Ifrost\DoctrineApiBundle\Query\Entity\EntityQuery;
 use Ifrost\DoctrineApiBundle\Utility\DbClient;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWSProvider\JWSProviderInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTManager;
+use Lexik\Bundle\JWTAuthenticationBundle\Signature\LoadedJWS;
 use Lexik\Bundle\JWTAuthenticationBundle\TokenExtractor\TokenExtractorInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 class LogoutActionTest extends TestCase
 {
@@ -61,7 +66,7 @@ class LogoutActionTest extends TestCase
 
     }
 
-    private function getActionData(): array
+    private function getActionData(array $data = []): array
     {
         $request = new Request();
         $oldJwt = 'old_jwt_token';
@@ -90,19 +95,15 @@ class LogoutActionTest extends TestCase
             [EntityQuery::class, User::getTableName(), $userUuid]
         )->willReturnOnConsecutiveCalls($tokenData, $userData);
         $db->method('delete')->with(Token::getTableName(), ['uuid' => $oldJwtUuid]);
-        $jwtManager = $this->createMock(JWTManager::class);
-        $jwtManager->method('parse')->with($oldJwt)->willReturn([
-            'uuid' => $tokenData['uuid'],
-            'iat' => $tokenData['iat'],
-            'exp' => $tokenData['exp'],
-            'device' => '',
-        ]);
+        $requestStack = new RequestStack();
+        $requestStack->push($request);
+        $jwsProvider = $this->createMock(JWSProviderInterface::class);
+        $jwsProvider->method('load')->with($oldJwt)->willReturn(new LoadedJWS(['uuid' => $oldJwtUuid], true, false));
+        $jwtPayloadFactory = new JwtPayloadFactory($requestStack, $tokenExtractor, $jwsProvider);
 
         return [
             'db' => $db,
-            'tokenExtractor' => $tokenExtractor,
-            'jwtManager' => $jwtManager,
-            'request' => $request,
+            'jwtPayloadFactory' => $jwtPayloadFactory,
         ];
     }
 }

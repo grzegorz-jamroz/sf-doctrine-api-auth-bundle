@@ -12,6 +12,7 @@ use Ifrost\DoctrineApiAuthBundle\Generator\RefreshTokenGeneratorInterface;
 use Ifrost\DoctrineApiAuthBundle\Payload\JwtPayloadFactory;
 use Ifrost\DoctrineApiAuthBundle\Payload\RefreshTokenPayloadFactory;
 use Ifrost\DoctrineApiAuthBundle\Query\FindTokenByRefreshTokenUuidQuery;
+use Ifrost\DoctrineApiBundle\Exception\NotFoundException;
 use Ifrost\DoctrineApiBundle\Query\Entity\EntityQuery;
 use Ifrost\DoctrineApiBundle\Utility\DbClient;
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
@@ -61,7 +62,12 @@ class RefreshTokenAction
 
         $response = new JsonResponse();
         $payload = $this->refreshTokenPayloadFactory->create();
-        $token = $this->getTokenEntity($payload);
+
+        try {
+            $token = $this->getTokenEntity($payload);
+        } catch (NotFoundException) {
+            throw new InvalidTokenException('Invalid Refresh Token');
+        }
 
         if ($payload['uuid'] !== $token->getRefreshTokenUuid()) {
             throw new InvalidTokenException('Invalid Refresh Token');
@@ -86,6 +92,10 @@ class RefreshTokenAction
         return $response;
     }
 
+    /**
+     * @throws NotFoundException
+     * @throws \Doctrine\DBAL\Exception
+     */
     private function getTokenEntity(array $payload): TokenInterface
     {
         return $this->tokenClassName::createFromArray(

@@ -27,8 +27,8 @@ class Token implements TokenInterface
     #[ORM\Column(length: 255, nullable: true)]
     private string $device;
 
-    #[ORM\Column(type: Types::TEXT)]
-    private string $refreshToken;
+    #[ORM\Column(type: 'uuid', length: 36, unique: true)]
+    private string $refreshTokenUuid;
 
     public function __construct(
         string $uuid,
@@ -36,14 +36,14 @@ class Token implements TokenInterface
         int $iat,
         int $exp,
         string $device,
-        string $refreshToken,
+        string $refreshTokenUuid,
     ) {
         $this->uuid = $uuid;
         $this->userUuid = $userUuid;
         $this->iat = $iat;
         $this->exp = $exp;
         $this->device = $device;
-        $this->refreshToken = $refreshToken;
+        $this->refreshTokenUuid = $refreshTokenUuid;
     }
 
     public function getUuid(): string
@@ -71,9 +71,9 @@ class Token implements TokenInterface
         return $this->device;
     }
 
-    public function getRefreshToken(): string
+    public function getRefreshTokenUuid(): string
     {
-        return $this->refreshToken;
+        return $this->refreshTokenUuid;
     }
 
     public static function getTableName(): string
@@ -97,7 +97,7 @@ class Token implements TokenInterface
             Transform::toInt($data['iat'] ?? 0),
             Transform::toInt($data['exp'] ?? 0),
             Transform::toString($data['device'] ?? ''),
-            Transform::toString($data['refresh_token'] ?? ''),
+            Transform::toString($data['refresh_token_uuid'] ?? ''),
         );
     }
 
@@ -112,7 +112,7 @@ class Token implements TokenInterface
             'iat' => $this->iat,
             'exp' => $this->exp,
             'device' => $this->device,
-            'refresh_token' => $this->refreshToken,
+            'refresh_token_uuid' => $this->refreshTokenUuid,
         ];
     }
 
