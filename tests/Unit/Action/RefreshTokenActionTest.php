@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Action;
 
+use Ifrost\ApiBundle\Utility\ApiRequest;
 use Ifrost\DoctrineApiAuthBundle\Generator\RefreshTokenGenerator;
 use Ifrost\DoctrineApiAuthBundle\Payload\JwtPayloadFactory;
 use Ifrost\DoctrineApiAuthBundle\Payload\RefreshTokenPayloadFactory;
@@ -11,6 +12,7 @@ use Ifrost\DoctrineApiAuthBundle\Query\FindTokenByRefreshTokenUuidQuery;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Action\RefreshTokenActionVariant;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity\Token;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity\User;
+use Ifrost\DoctrineApiAuthBundle\TokenExtractor\RefreshTokenExtractor;
 use Ifrost\DoctrineApiAuthBundle\TokenExtractor\TokenExtractorInterface as RefreshTokenExtractorInterface;
 use Ifrost\DoctrineApiBundle\Exception\NotFoundException;
 use Ifrost\DoctrineApiBundle\Query\Entity\EntityQuery;
@@ -378,6 +380,8 @@ class RefreshTokenActionTest extends TestCase
     private function getActionData(): array
     {
         $request = new Request();
+        $requestStack = new RequestStack();
+        $requestStack->push($request);
         $newJwt = 'new_jwt_token';
         $newRefreshTokenUuid = 'new_refresh_token_uuid';
         $newRefreshToken = 'new_refresh_token';
@@ -402,10 +406,11 @@ class RefreshTokenActionTest extends TestCase
         ];
 
         $request->headers->set('Authorization', sprintf('Bearer %s', $currentToken));
+        $request->cookies->set('refreshToken', $currentRefreshToken);
         $tokenExtractor = $this->createMock(TokenExtractorInterface::class);
         $tokenExtractor->method('extract')->with($request)->willReturn($currentToken);
-        $refreshTokenExtractor = $this->createMock(RefreshTokenExtractorInterface::class);
-        $refreshTokenExtractor->method('extract')->willReturn($currentRefreshToken);
+        $apiRequest = new ApiRequest($requestStack);
+        $refreshTokenExtractor = new RefreshTokenExtractor('refreshToken', $apiRequest);
         $refreshTokenEncoder = $this->createMock(JWTEncoderInterface::class);
         $refreshTokenEncoder->method('decode')->withConsecutive(
             [$currentRefreshToken],
@@ -434,8 +439,6 @@ class RefreshTokenActionTest extends TestCase
             'device' => '',
         ]);
         $refreshTokenGenerator = new RefreshTokenGenerator($jwsProvider);
-        $requestStack = new RequestStack();
-        $requestStack->push($request);
         $jwtPayloadFactory = new JwtPayloadFactory($requestStack, $tokenExtractor, $jwsProvider);
         $refreshTokenPayloadFactory = new RefreshTokenPayloadFactory($refreshTokenExtractor, $refreshTokenEncoder);
 
