@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Action;
 
-use Ifrost\DoctrineApiAuthBundle\Generator\RefreshTokenGeneratorInterface;
+use Ifrost\DoctrineApiAuthBundle\Generator\RefreshTokenGenerator;
 use Ifrost\DoctrineApiAuthBundle\Payload\JwtPayloadFactory;
 use Ifrost\DoctrineApiAuthBundle\Payload\RefreshTokenPayloadFactory;
 use Ifrost\DoctrineApiAuthBundle\Query\FindTokenByRefreshTokenUuidQuery;
@@ -21,6 +21,7 @@ use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\MissingTokenException;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWSProvider\JWSProviderInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTManager;
+use Lexik\Bundle\JWTAuthenticationBundle\Signature\CreatedJWS;
 use Lexik\Bundle\JWTAuthenticationBundle\Signature\LoadedJWS;
 use Lexik\Bundle\JWTAuthenticationBundle\TokenExtractor\TokenExtractorInterface;
 use PHPUnit\Framework\TestCase;
@@ -418,6 +419,7 @@ class RefreshTokenActionTest extends TestCase
         $dispatcher = $this->createMock(EventDispatcherInterface::class);
         $jwsProvider = $this->createMock(JWSProviderInterface::class);
         $jwsProvider->method('load')->with($currentToken)->willReturn(new LoadedJWS($currentTokenData, true));
+        $jwsProvider->method('create')->willReturn(new CreatedJWS($newRefreshToken, true));
         $db = $this->createMock(DbClient::class);
         $db->method('fetchOne')->withConsecutive(
             [FindTokenByRefreshTokenUuidQuery::class, Token::getTableName(), $currentTokenData['refresh_token_uuid']],
@@ -431,8 +433,7 @@ class RefreshTokenActionTest extends TestCase
             'exp' => 1673453062,
             'device' => '',
         ]);
-        $refreshTokenGenerator = $this->createMock(RefreshTokenGeneratorInterface::class);
-        $refreshTokenGenerator->method('generate')->willReturn($newRefreshToken);
+        $refreshTokenGenerator = new RefreshTokenGenerator($jwsProvider);
         $requestStack = new RequestStack();
         $requestStack->push($request);
         $jwtPayloadFactory = new JwtPayloadFactory($requestStack, $tokenExtractor, $jwsProvider);
