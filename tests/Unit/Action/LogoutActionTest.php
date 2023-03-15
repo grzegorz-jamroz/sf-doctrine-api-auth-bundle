@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace Action;
 
 use Ifrost\DoctrineApiAuthBundle\Payload\JwtPayloadFactory;
-use Ifrost\DoctrineApiAuthBundle\Payload\RefreshTokenPayloadFactory;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Action\LogoutActionVariant;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity\Token;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity\User;
 use Ifrost\DoctrineApiBundle\Query\Entity\EntityQuery;
 use Ifrost\DoctrineApiBundle\Utility\DbClient;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWSProvider\JWSProviderInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTManager;
 use Lexik\Bundle\JWTAuthenticationBundle\Signature\LoadedJWS;
 use Lexik\Bundle\JWTAuthenticationBundle\TokenExtractor\TokenExtractorInterface;
 use PHPUnit\Framework\TestCase;

@@ -229,23 +229,16 @@ class RefreshTokenActionTest extends TestCase
     {
         // Expect
         $this->expectException(InvalidTokenException::class);
-        $this->expectExceptionMessage(sprintf('Invalid JWT Token - User "%s" does not exist', '166f8006-b4aa-4df3-a9ea-58a3aae2492b'));
+        $this->expectExceptionMessage(sprintf('Invalid JWT Token - User "%s" does not exist', '3fc713ae-f1b8-43a6-95d2-e6d573fab41a'));
 
         // Given
         $data = $this->getActionData();
         $db = $this->createMock(DbClient::class);
         $db->method('fetchOne')->withConsecutive(
-            [FindTokenByRefreshTokenUuidQuery::class, Token::getTableName(), '25feb06b-0c1e-4416-86fc-706134f2c7de'],
-            [EntityQuery::class, User::getTableName(), '166f8006-b4aa-4df3-a9ea-58a3aae2492b']
+            [FindTokenByRefreshTokenUuidQuery::class, Token::getTableName(), '60efd5f1-d831-4c02-863d-4ee11843fc2e'],
+            [EntityQuery::class, User::getTableName(), '3fc713ae-f1b8-43a6-95d2-e6d573fab41a']
         )->willReturnOnConsecutiveCalls(
-            [
-                'uuid' => '25feb06b-0c1e-4416-86fc-706134f2c7de',
-                'user_uuid' => '166f8006-b4aa-4df3-a9ea-58a3aae2492b',
-                'iat' => 1673457094,
-                'exp' => 1673460694,
-                'device' => '',
-                'refresh_token_uuid' => '60efd5f1-d831-4c02-863d-4ee11843fc2e',
-            ],
+            $this->getCurrentTokenData(),
             $this->throwException(new NotFoundException(sprintf('Record not found for query "%s"', EntityQuery::class), 404))
         );
         $data['db'] = $db;
