@@ -259,10 +259,60 @@ class RefreshTokenActionTest extends TestCase
         $request = new Request();
         $data = $this->getActionData();
         $tokenExtractor = $this->createMock(TokenExtractorInterface::class);
-        $tokenExtractor->method('extract')->with(new Request())->willReturn(false);
+        $tokenExtractor->method('extract')->with($request)->willReturn(false);
         $requestStack = new RequestStack();
         $requestStack->push($request);
         $jwsProvider = $this->createMock(JWSProviderInterface::class);
+        $jwtPayloadFactory = new JwtPayloadFactory($requestStack, $tokenExtractor, $jwsProvider);
+        $data['jwtPayloadFactory'] = $jwtPayloadFactory;
+        $data['validateJwt'] = true;
+        $action = RefreshTokenActionVariant::createFromArray($data);
+
+        // When & Then
+        $action->__invoke();
+    }
+
+    public function testShouldThrowJWTDecodeFailureExceptionWhenOptionValidateJwtIsEnabledAndTokenIsNotValid()
+    {
+        // Expect
+        $this->expectException(JWTDecodeFailureException::class);
+        $this->expectExceptionMessage('Invalid JWT Token');
+
+        // Given
+        $request = new Request();
+        $data = $this->getActionData();
+        $request->headers->set('Authorization', sprintf('Bearer %s', 'invalid_token'));
+        $tokenExtractor = $this->createMock(TokenExtractorInterface::class);
+        $tokenExtractor->method('extract')->with($request)->willReturn('invalid_token');
+        $requestStack = new RequestStack();
+        $requestStack->push($request);
+        $jwsProvider = $this->createMock(JWSProviderInterface::class);
+        $jwsProvider->method('load')->with('invalid_token')->willThrowException(new \Exception('Some exception'));
+        $jwtPayloadFactory = new JwtPayloadFactory($requestStack, $tokenExtractor, $jwsProvider);
+        $data['jwtPayloadFactory'] = $jwtPayloadFactory;
+        $data['validateJwt'] = true;
+        $action = RefreshTokenActionVariant::createFromArray($data);
+
+        // When & Then
+        $action->__invoke();
+    }
+
+    public function testShouldThrowJWTDecodeFailureExceptionWhenOptionValidateJwtIsEnabledAndTokenIsLoadedButIsNotValid()
+    {
+        // Expect
+        $this->expectException(JWTDecodeFailureException::class);
+        $this->expectExceptionMessage('Invalid JWT Token');
+
+        // Given
+        $request = new Request();
+        $data = $this->getActionData();
+        $request->headers->set('Authorization', sprintf('Bearer %s', 'invalid_token'));
+        $tokenExtractor = $this->createMock(TokenExtractorInterface::class);
+        $tokenExtractor->method('extract')->with($request)->willReturn('invalid_token');
+        $requestStack = new RequestStack();
+        $requestStack->push($request);
+        $jwsProvider = $this->createMock(JWSProviderInterface::class);
+        $jwsProvider->method('load')->with('invalid_token')->willReturn(new LoadedJWS(['iat' => time() + 31536000], true, false));
         $jwtPayloadFactory = new JwtPayloadFactory($requestStack, $tokenExtractor, $jwsProvider);
         $data['jwtPayloadFactory'] = $jwtPayloadFactory;
         $data['validateJwt'] = true;

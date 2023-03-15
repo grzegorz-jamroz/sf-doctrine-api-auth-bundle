@@ -61,10 +61,9 @@ class LogoutActionTest extends TestCase
             ),
             $response->headers->getCookies()[0]
         );
-
     }
 
-    private function getActionData(array $data = []): array
+    private function getActionData(): array
     {
         $request = new Request();
         $oldJwt = 'old_jwt_token';
