@@ -18,17 +18,10 @@ class GetConfigurationTest extends TestCase
     public function testShouldLoadDefaultConfig()
     {
         // Given
-        $configs = [
-            'ifrost_doctrine_api_auth' => [
-                'exception_listener' => true,
-                'ttl' => 2592000,
-                'token_parameter_name' => 'refresh_token',
-            ],
-        ];
         $containerBuilder = new ContainerBuilder();
 
         // When
-        (new IfrostDoctrineApiAuthExtension())->load($configs, $containerBuilder);
+        (new IfrostDoctrineApiAuthExtension())->load([], $containerBuilder);
 
         // Then
         $this->assertTrue($containerBuilder->getParameter('ifrost_doctrine_api_auth.exception_listener'));
