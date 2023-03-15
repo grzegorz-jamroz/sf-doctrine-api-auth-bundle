@@ -116,7 +116,7 @@ class RefreshTokenActionTest extends TestCase
         $action->__invoke();
     }
 
-    public function testShouldThrowJWTDecodeFailureExceptionWhenCurrentTokenIsNotValid()
+    public function testShouldThrowJWTDecodeFailureExceptionWhenCurrentRefreshTokenIsNotValid()
     {
         // Expect
         $this->expectException(JWTDecodeFailureException::class);
@@ -129,7 +129,12 @@ class RefreshTokenActionTest extends TestCase
             ->method('decode')
             ->with('current_refresh_token')
             ->willThrowException(new JWTDecodeFailureException(JWTDecodeFailureException::INVALID_TOKEN, 'Invalid JWT Token'));
-        $data['refreshTokenEncoder'] = $refreshTokenEncoder;
+        $refreshTokenExtractor = $this->createMock(RefreshTokenExtractorInterface::class);
+        $refreshTokenExtractor->method('extract')->willReturn('current_refresh_token');
+        $data['refreshTokenPayloadFactory'] = new RefreshTokenPayloadFactory(
+            $refreshTokenExtractor,
+            $refreshTokenEncoder
+        );
         $action = RefreshTokenActionVariant::createFromArray($data);
 
         // When & Then
@@ -149,7 +154,12 @@ class RefreshTokenActionTest extends TestCase
             ->method('decode')
             ->with('current_refresh_token')
             ->willThrowException(new JWTDecodeFailureException(JWTDecodeFailureException::EXPIRED_TOKEN, 'Expired JWT Token'));
-        $data['refreshTokenEncoder'] = $refreshTokenEncoder;
+        $refreshTokenExtractor = $this->createMock(RefreshTokenExtractorInterface::class);
+        $refreshTokenExtractor->method('extract')->willReturn('current_refresh_token');
+        $data['refreshTokenPayloadFactory'] = new RefreshTokenPayloadFactory(
+            $refreshTokenExtractor,
+            $refreshTokenEncoder
+        );
         $action = RefreshTokenActionVariant::createFromArray($data);
 
         // When & Then
@@ -169,7 +179,12 @@ class RefreshTokenActionTest extends TestCase
             ->method('decode')
             ->with('current_refresh_token')
             ->willThrowException(new JWTDecodeFailureException(JWTDecodeFailureException::UNVERIFIED_TOKEN, 'Unable to verify the given JWT through the given configuration. If the "lexik_jwt_authentication.encoder" encryption options have been changed since your last authentication, please renew the token. If the problem persists, verify that the configured keys/passphrase are valid.'));
-        $data['refreshTokenEncoder'] = $refreshTokenEncoder;
+        $refreshTokenExtractor = $this->createMock(RefreshTokenExtractorInterface::class);
+        $refreshTokenExtractor->method('extract')->willReturn('current_refresh_token');
+        $data['refreshTokenPayloadFactory'] = new RefreshTokenPayloadFactory(
+            $refreshTokenExtractor,
+            $refreshTokenEncoder
+        );
         $action = RefreshTokenActionVariant::createFromArray($data);
 
         // When & Then
@@ -188,8 +203,22 @@ class RefreshTokenActionTest extends TestCase
         $refreshTokenEncoder
             ->method('decode')
             ->with('current_refresh_token')
-            ->willReturn(['token' => 'another_current_refresh_token_db_hash']);
-        $data['refreshTokenEncoder'] = $refreshTokenEncoder;
+            ->willReturn(['uuid' => '88f2d11d-6ea4-4f8b-92b0-abb655ab070d']);
+        $refreshTokenExtractor = $this->createMock(RefreshTokenExtractorInterface::class);
+        $refreshTokenExtractor->method('extract')->willReturn('current_refresh_token');
+        $data['refreshTokenPayloadFactory'] = new RefreshTokenPayloadFactory(
+            $refreshTokenExtractor,
+            $refreshTokenEncoder
+        );
+        $db = $this->createMock(DbClient::class);
+        $db->method('fetchOne')->with(
+            FindTokenByRefreshTokenUuidQuery::class,
+            Token::getTableName(),
+            '88f2d11d-6ea4-4f8b-92b0-abb655ab070d'
+        )->willThrowException(
+            new NotFoundException(sprintf('Record not found for query "%s"', EntityQuery::class), 404)
+        );
+        $data['db'] = $db;
         $action = RefreshTokenActionVariant::createFromArray($data);
 
         // When & Then
@@ -215,11 +244,10 @@ class RefreshTokenActionTest extends TestCase
                 'iat' => 1673457094,
                 'exp' => 1673460694,
                 'device' => '',
-                'refresh_token' => 'current_refresh_token_db_hash',
+                'refresh_token_uuid' => '60efd5f1-d831-4c02-863d-4ee11843fc2e',
             ],
             $this->throwException(new NotFoundException(sprintf('Record not found for query "%s"', EntityQuery::class), 404))
         );
-
         $data['db'] = $db;
         $action = RefreshTokenActionVariant::createFromArray($data);
 
@@ -231,7 +259,7 @@ class RefreshTokenActionTest extends TestCase
     {
         $request = new Request();
         $newJwt = 'new_jwt_token';
-        $newRefreshTokenUuid = 'new_refresh_token_db_hash';
+        $newRefreshTokenUuid = 'new_refresh_token_uuid';
         $newRefreshToken = 'new_refresh_token';
 
         $userUuid = '3fc713ae-f1b8-43a6-95d2-e6d573fab41a';
@@ -242,14 +270,7 @@ class RefreshTokenActionTest extends TestCase
         ];
 
         $currentToken = 'current_token';
-        $currentTokenData = [
-            'uuid' => '25feb06b-0c1e-4416-86fc-706134f2c7de',
-            'user_uuid' => $userUuid,
-            'iat' => 1673457094,
-            'exp' => 1673460694,
-            'device' => '',
-            'refresh_token_uuid' => '60efd5f1-d831-4c02-863d-4ee11843fc2e',
-        ];
+        $currentTokenData = $this->getCurrentTokenData();
 
         $currentRefreshToken = 'current_refresh_token';
         $currentRefreshTokenData = [
@@ -306,6 +327,18 @@ class RefreshTokenActionTest extends TestCase
             'dispatcher' => $dispatcher,
             'jwtManager' => $jwtManager,
             'refreshTokenGenerator' => $refreshTokenGenerator,
+        ];
+    }
+
+    private function getCurrentTokenData(): array
+    {
+        return [
+            'uuid' => '25feb06b-0c1e-4416-86fc-706134f2c7de',
+            'user_uuid' => '3fc713ae-f1b8-43a6-95d2-e6d573fab41a',
+            'iat' => 1673457094,
+            'exp' => 1673460694,
+            'device' => '',
+            'refresh_token_uuid' => '60efd5f1-d831-4c02-863d-4ee11843fc2e',
         ];
     }
 }
