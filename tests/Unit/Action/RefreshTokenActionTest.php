@@ -96,7 +96,34 @@ class RefreshTokenActionTest extends TestCase
             ),
             $response->headers->getCookies()[0]
         );
+    }
 
+    public function testShouldReturnResponseWithTokenInBodyWhenOptionValidateJwtIsEnabledAndTokenIsExpired()
+    {
+        // Given
+        $request = new Request();
+        $data = $this->getActionData();
+        $request->headers->set('Authorization', sprintf('Bearer %s', 'invalid_token'));
+        $tokenExtractor = $this->createMock(TokenExtractorInterface::class);
+        $tokenExtractor->method('extract')->with($request)->willReturn('invalid_token');
+        $requestStack = new RequestStack();
+        $requestStack->push($request);
+        $jwsProvider = $this->createMock(JWSProviderInterface::class);
+        $jwsProvider->method('load')->with('invalid_token')->willReturn(new LoadedJWS(['exp' => 0], false));
+        $jwtPayloadFactory = new JwtPayloadFactory($requestStack, $tokenExtractor, $jwsProvider);
+        $data['jwtPayloadFactory'] = $jwtPayloadFactory;
+        $data['validateJwt'] = true;
+        $action = RefreshTokenActionVariant::createFromArray($data);
+
+        // When
+        $response = $action->__invoke();
+
+        // Then
+        $this->assertInstanceOf(JsonResponse::class, $response);
+        $this->assertEquals(
+            ['token' => 'new_jwt_token'],
+            json_decode($response->getContent(), true)
+        );
     }
 
     public function testShouldThrowInvalidTokenExceptionWhenTokenDoesNotExistInDatabase()
