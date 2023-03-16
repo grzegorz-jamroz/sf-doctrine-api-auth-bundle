@@ -8,16 +8,13 @@ use Ifrost\ApiBundle\Utility\ApiRequest;
 use Ifrost\DoctrineApiAuthBundle\Generator\RefreshTokenGenerator;
 use Ifrost\DoctrineApiAuthBundle\Payload\JwtPayloadFactory;
 use Ifrost\DoctrineApiAuthBundle\Payload\RefreshTokenPayloadFactory;
-use Ifrost\DoctrineApiAuthBundle\Query\FindTokenByRefreshTokenUuidQuery;
 use Ifrost\DoctrineApiAuthBundle\Tests\Unit\BundleTestCase;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Action\RefreshTokenActionVariant;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity\Token;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity\User;
 use Ifrost\DoctrineApiAuthBundle\TokenExtractor\RefreshTokenExtractor;
 use Ifrost\DoctrineApiAuthBundle\TokenExtractor\TokenExtractorInterface as RefreshTokenExtractorInterface;
-use Ifrost\DoctrineApiBundle\Exception\NotFoundException;
-use Ifrost\DoctrineApiBundle\Query\Entity\EntityQuery;
-use Ifrost\DoctrineApiBundle\Utility\DbClient;
+use Ifrost\DoctrineApiBundle\Query\Entity\EntitiesQuery;
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\InvalidTokenException;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
@@ -47,6 +44,7 @@ class RefreshTokenActionTest extends BundleTestCase
     private RefreshTokenExtractor $refreshTokenExtractor;
     private EventDispatcherInterface $dispatcher;
     private RefreshTokenPayloadFactory $refreshTokenPayloadFactory;
+    private RefreshTokenActionVariant $action;
     private User $user;
     private array $refreshTokenPayload;
 
@@ -103,21 +101,44 @@ class RefreshTokenActionTest extends BundleTestCase
             'device' => '',
             'refresh_token_uuid' => '60efd5f1-d831-4c02-863d-4ee11843fc2e',
         ]);
+        $this->action = RefreshTokenActionVariant::createFromArray($this->getActionData());
     }
 
-    public function testShouldReturnResponseWithTokenInBody()
+    public function testShouldUpdateCurrentTokenRowInDatabase()
     {
-        // Expect
+        // Expect & Given
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
         $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
 
-        // Given
-        $data = $this->getActionData();
-        $action = RefreshTokenActionVariant::createFromArray($data);
+        // When
+        $this->action->__invoke();
+        $tokens = $this->db->fetchAll(EntitiesQuery::class, Token::getTableName());
+
+        // Then
+        $this->assertCount(1, $tokens);
+        $this->assertEquals(
+            [
+                'uuid' => '2853c2f5-cb44-46d9-a691-ff2110ff37e5',
+                'iat' => 1573449462,
+                'exp' => 1573453062,
+                'device' => '',
+                'user_uuid' => $this->user->getUuid(),
+                'refresh_token_uuid' => '3e1bbccb-ff5a-448c-b160-82990d7dc49b',
+            ],
+            $tokens[0],
+        );
+    }
+
+    public function testShouldReturnResponseWithTokenInBody()
+    {
+        // Expect & Given
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
 
         // When
-        $response = $action->__invoke();
+        $response = $this->action->__invoke();
 
         // Then
         $this->assertInstanceOf(JsonResponse::class, $response);
@@ -221,23 +242,14 @@ class RefreshTokenActionTest extends BundleTestCase
 
     public function testShouldThrowInvalidTokenExceptionWhenTokenDoesNotExistInDatabase()
     {
-        // Expect
+        // Expect & Given
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
         $this->expectException(InvalidTokenException::class);
         $this->expectExceptionMessage('Invalid Refresh Token');
 
-        // Given
-        $data = $this->getActionData();
-        $db = $this->createMock(DbClient::class);
-        $db->method('fetchOne')->with(FindTokenByRefreshTokenUuidQuery::class, Token::getTableName(), '60efd5f1-d831-4c02-863d-4ee11843fc2e')
-            ->willThrowException(new NotFoundException(sprintf('Record not found for query "%s"', EntityQuery::class), 404));
-        $data['db'] = $db;
-        $action = RefreshTokenActionVariant::createFromArray($data);
-
         // When & Then
-        $action->__invoke();
+        $this->action->__invoke();
     }
 
     public function testShouldThrowJWTDecodeFailureExceptionWhenCurrentRefreshTokenIsNotValid()
@@ -346,15 +358,6 @@ class RefreshTokenActionTest extends BundleTestCase
             $refreshTokenExtractor,
             $refreshTokenEncoder
         );
-        $db = $this->createMock(DbClient::class);
-        $db->method('fetchOne')->with(
-            FindTokenByRefreshTokenUuidQuery::class,
-            Token::getTableName(),
-            '88f2d11d-6ea4-4f8b-92b0-abb655ab070d'
-        )->willThrowException(
-            new NotFoundException(sprintf('Record not found for query "%s"', EntityQuery::class), 404)
-        );
-        $data['db'] = $db;
         $action = RefreshTokenActionVariant::createFromArray($data);
 
         // When & Then
@@ -363,28 +366,15 @@ class RefreshTokenActionTest extends BundleTestCase
 
     public function testShouldThrowInvalidTokenExceptionWhenUserRelatedWithTokenDoesNotExist()
     {
-        // Expect
+        // Expect & Given
         $this->truncateTable(Token::getTableName());
-        $this->createUserIfNotExists($this->user);
+        $this->truncateTable(User::getTableName());
         $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
         $this->expectException(InvalidTokenException::class);
         $this->expectExceptionMessage(sprintf('Invalid JWT Token - User "%s" does not exist', '3fc713ae-f1b8-43a6-95d2-e6d573fab41a'));
 
-        // Given
-        $data = $this->getActionData();
-        $db = $this->createMock(DbClient::class);
-        $db->method('fetchOne')->withConsecutive(
-            [FindTokenByRefreshTokenUuidQuery::class, Token::getTableName(), '60efd5f1-d831-4c02-863d-4ee11843fc2e'],
-            [EntityQuery::class, User::getTableName(), '3fc713ae-f1b8-43a6-95d2-e6d573fab41a']
-        )->willReturnOnConsecutiveCalls(
-            $this->token->jsonSerialize(),
-            $this->throwException(new NotFoundException(sprintf('Record not found for query "%s"', EntityQuery::class), 404))
-        );
-        $data['db'] = $db;
-        $action = RefreshTokenActionVariant::createFromArray($data);
-
         // When & Then
-        $action->__invoke();
+        $this->action->__invoke();
     }
     
     public function testShouldThrowMissingTokenExceptionWhenOptionValidateJwtIsEnabledAndTokenNotSent()
@@ -500,7 +490,7 @@ class RefreshTokenActionTest extends BundleTestCase
     private function getActionData(): array
     {
         $newJwt = 'new_jwt_token';
-        $newRefreshTokenUuid = 'new_refresh_token_uuid';
+        $newRefreshTokenUuid = '3e1bbccb-ff5a-448c-b160-82990d7dc49b';
         $newRefreshToken = 'new_refresh_token';
         $currentToken = 'current_token';
         $currentRefreshToken = 'current_refresh_token';

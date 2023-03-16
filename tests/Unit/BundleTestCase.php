@@ -8,6 +8,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Exception;
 use Ifrost\DoctrineApiAuthBundle\Entity\ApiUserInterface;
+use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity\User;
 use Ifrost\DoctrineApiBundle\Exception\NotFoundException;
 use Ifrost\DoctrineApiBundle\Query\Entity\EntityQuery;
 use Ifrost\DoctrineApiBundle\Utility\DbClient;
@@ -32,7 +33,7 @@ class BundleTestCase extends TestCase
         $this->dbal->executeStatement("TRUNCATE TABLE $tableName");
     }
 
-    protected function createUserIfNotExists(ApiUserInterface $user): void
+    protected function createUserIfNotExists(User $user): void
     {
         try {
             $this->db->fetchColumn(EntityQuery::class, $user::getTableName(), $user->getUuid());
@@ -41,6 +42,7 @@ class BundleTestCase extends TestCase
         } catch (NotFoundException) {
             $data = $user->jsonSerialize();
             $data['roles'] = json_encode($data['roles']);
+            $data['password'] = $user->getPassword();
             $this->db->insert($user::getTableName(), $data);
         }
     }
