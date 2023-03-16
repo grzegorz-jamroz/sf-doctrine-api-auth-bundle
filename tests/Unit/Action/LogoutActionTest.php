@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Action;
+namespace Ifrost\DoctrineApiAuthBundle\Tests\Unit\Action;
 
 use Ifrost\DoctrineApiAuthBundle\Payload\JwtPayloadFactory;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Action\LogoutActionVariant;

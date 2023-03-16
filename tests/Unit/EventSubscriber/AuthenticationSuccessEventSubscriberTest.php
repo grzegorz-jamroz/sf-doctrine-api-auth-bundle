@@ -153,7 +153,7 @@ class AuthenticationSuccessEventSubscriberTest extends BundleTestCase
         $this->eventSubscriber = AuthenticationSuccessEventSubscriberVariant::createFromArray([
             'returnUserInBody' => true,
             'jwtManager' => $this->jwtManager,
-            'db' => $this->dbal,
+            'dbal' => $this->dbal,
             'refreshTokenGenerator' => $this->refreshTokenGenerator,
             'refreshTokenEncoder' => $this->refreshTokenEncoder,
         ]);
@@ -201,7 +201,7 @@ class AuthenticationSuccessEventSubscriberTest extends BundleTestCase
         $this->eventSubscriber = AuthenticationSuccessEventSubscriberVariant::createFromArray([
             'returnRefreshTokenInBody' => true,
             'jwtManager' => $this->jwtManager,
-            'db' => $this->dbal,
+            'dbal' => $this->dbal,
             'refreshTokenGenerator' => $this->refreshTokenGenerator,
             'refreshTokenEncoder' => $this->refreshTokenEncoder,
         ]);
@@ -256,7 +256,7 @@ class AuthenticationSuccessEventSubscriberTest extends BundleTestCase
                 'secure' => true,
             ],
             'jwtManager' => $this->jwtManager,
-            'db' => $this->dbal,
+            'dbal' => $this->dbal,
             'refreshTokenGenerator' => $this->refreshTokenGenerator,
             'refreshTokenEncoder' => $this->refreshTokenEncoder,
         ]);

@@ -111,6 +111,7 @@ class RefreshTokenAction
     {
         try {
             $userData = $this->db->fetchOne(EntityQuery::class, $this->userClassName::getTableName(), $userUuid);
+            $userData['roles'] = json_decode($userData['roles'] ?? [], true);
             $event = new TokenRefreshAfterGetUserDataEvent($this->userClassName, $userData);
             $this->dispatcher->dispatch($event, Events::TOKEN_REFRESH_AFTER_GET_USER_DATA);
 

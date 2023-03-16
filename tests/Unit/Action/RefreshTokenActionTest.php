@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Action;
+namespace Ifrost\DoctrineApiAuthBundle\Tests\Unit\Action;
 
 use Ifrost\ApiBundle\Utility\ApiRequest;
 use Ifrost\DoctrineApiAuthBundle\Generator\RefreshTokenGenerator;
 use Ifrost\DoctrineApiAuthBundle\Payload\JwtPayloadFactory;
 use Ifrost\DoctrineApiAuthBundle\Payload\RefreshTokenPayloadFactory;
 use Ifrost\DoctrineApiAuthBundle\Query\FindTokenByRefreshTokenUuidQuery;
+use Ifrost\DoctrineApiAuthBundle\Tests\Unit\BundleTestCase;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Action\RefreshTokenActionVariant;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity\Token;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity\User;
@@ -26,17 +27,91 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTManager;
 use Lexik\Bundle\JWTAuthenticationBundle\Signature\CreatedJWS;
 use Lexik\Bundle\JWTAuthenticationBundle\Signature\LoadedJWS;
 use Lexik\Bundle\JWTAuthenticationBundle\TokenExtractor\TokenExtractorInterface;
-use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
-class RefreshTokenActionTest extends TestCase
+class RefreshTokenActionTest extends BundleTestCase
 {
+    private JWSProviderInterface $jwsProvider;
+    private JWTManager $jwtManager;
+    private RefreshTokenGenerator $refreshTokenGenerator;
+    private JWTEncoderInterface $refreshTokenEncoder;
+    private Request $request;
+    private RequestStack $requestStack;
+    private TokenExtractorInterface $tokenExtractor;
+    private JwtPayloadFactory $jwtPayloadFactory;
+    private ApiRequest $apiRequest;
+    private RefreshTokenExtractor $refreshTokenExtractor;
+    private EventDispatcherInterface $dispatcher;
+    private RefreshTokenPayloadFactory $refreshTokenPayloadFactory;
+    private User $user;
+    private array $refreshTokenPayload;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->jwsProvider = $this->createMock(JWSProviderInterface::class);
+        $this->jwtManager = $this->createMock(JWTManager::class);
+        $this->refreshTokenGenerator = new RefreshTokenGenerator($this->jwsProvider);
+        $this->refreshTokenEncoder = $this->createMock(JWTEncoderInterface::class);
+        $this->request = new Request();
+        $this->requestStack = new RequestStack();
+        $this->requestStack->push($this->request);
+        $this->tokenExtractor = $this->createMock(TokenExtractorInterface::class);
+        $this->jwtPayloadFactory = new JwtPayloadFactory($this->requestStack, $this->tokenExtractor, $this->jwsProvider);
+        $this->apiRequest = new ApiRequest($this->requestStack);
+        $this->refreshTokenExtractor = new RefreshTokenExtractor('refreshToken', $this->apiRequest);
+        $this->dispatcher = $this->createMock(EventDispatcherInterface::class);
+        $this->refreshTokenPayloadFactory = new RefreshTokenPayloadFactory($this->refreshTokenExtractor, $this->refreshTokenEncoder);
+        $this->user = User::createFromArray([
+            'uuid' => '3fc713ae-f1b8-43a6-95d2-e6d573fab41a',
+            'email' => 'tom.smith@email.com',
+            'roles' => ['ROLE_USER'],
+            'password' => '123'
+        ]);
+        $this->refreshTokenPayload = [
+            'iat' => 1573457094,
+            'exp' => 1573460694,
+            'uuid' => '60efd5f1-d831-4c02-863d-4ee11843fc2e',
+            'token' => 'token',
+        ];
+        $this->jwtPayload = [
+            'uuid' => '25feb06b-0c1e-4416-86fc-706134f2c7de',
+            'iat' => 1573457094,
+            'exp' => 1573460694,
+            'device' => '',
+            'roles' => $this->user->getRoles(),
+            'username' => $this->user->getEmail(),
+        ];
+        $this->newJwtPayload = [
+            'uuid' => '2853c2f5-cb44-46d9-a691-ff2110ff37e5',
+            'iat' => 1573449462,
+            'exp' => 1573453062,
+            'device' => '',
+            'roles' => $this->user->getRoles(),
+            'username' => $this->user->getEmail(),
+        ];
+        $this->token = Token::createFromArray([
+            'uuid' => '25feb06b-0c1e-4416-86fc-706134f2c7de',
+            'user_uuid' => '3fc713ae-f1b8-43a6-95d2-e6d573fab41a',
+            'iat' => 1673457094,
+            'exp' => 1673460694,
+            'device' => '',
+            'refresh_token_uuid' => '60efd5f1-d831-4c02-863d-4ee11843fc2e',
+        ]);
+    }
+
     public function testShouldReturnResponseWithTokenInBody()
     {
+        // Expect
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+
         // Given
         $data = $this->getActionData();
         $action = RefreshTokenActionVariant::createFromArray($data);
@@ -54,6 +129,11 @@ class RefreshTokenActionTest extends TestCase
 
     public function testShouldReturnResponseWithTokenAndRefreshTokenInBody()
     {
+        // Expect
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+
         // Given
         $data = $this->getActionData();
         $data['returnRefreshTokenInBody'] = true;
@@ -75,6 +155,11 @@ class RefreshTokenActionTest extends TestCase
 
     public function testShouldReturnResponseAndSetDefaultCookieWhenConfigEnabled()
     {
+        // Expect
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+
         // Given
         $data = $this->getActionData();
         $data['cookieSettings']['enabled'] = true;
@@ -103,6 +188,11 @@ class RefreshTokenActionTest extends TestCase
 
     public function testShouldReturnResponseWithTokenInBodyWhenOptionValidateJwtIsEnabledAndTokenIsExpired()
     {
+        // Expect
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+
         // Given
         $request = new Request();
         $data = $this->getActionData();
@@ -132,6 +222,9 @@ class RefreshTokenActionTest extends TestCase
     public function testShouldThrowInvalidTokenExceptionWhenTokenDoesNotExistInDatabase()
     {
         // Expect
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
         $this->expectException(InvalidTokenException::class);
         $this->expectExceptionMessage('Invalid Refresh Token');
 
@@ -150,6 +243,9 @@ class RefreshTokenActionTest extends TestCase
     public function testShouldThrowJWTDecodeFailureExceptionWhenCurrentRefreshTokenIsNotValid()
     {
         // Expect
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
         $this->expectException(JWTDecodeFailureException::class);
         $this->expectExceptionMessage('Invalid Refresh Token');
 
@@ -175,6 +271,9 @@ class RefreshTokenActionTest extends TestCase
     public function testShouldThrowJWTDecodeFailureExceptionWhenRefreshTokenIsExpired()
     {
         // Expect
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
         $this->expectException(JWTDecodeFailureException::class);
         $this->expectExceptionMessage('Expired Refresh Token');
 
@@ -200,6 +299,9 @@ class RefreshTokenActionTest extends TestCase
     public function testShouldThrowJWTDecodeFailureExceptionWhenRefreshTokenIsUnverified()
     {
         // Expect
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
         $this->expectException(JWTDecodeFailureException::class);
         $this->expectExceptionMessage('Unable to verify the given Refresh Token through the given configuration. If the "lexik_jwt_authentication.encoder" encryption options have been changed since your last authentication, please renew the token. If the problem persists, verify that the configured keys/passphrase are valid.');
 
@@ -225,6 +327,9 @@ class RefreshTokenActionTest extends TestCase
     public function testShouldThrowInvalidTokenExceptionWhenRefreshTokenIsNotValid()
     {
         // Expect
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
         $this->expectException(InvalidTokenException::class);
         $this->expectExceptionMessage('Invalid Refresh Token');
 
@@ -259,6 +364,9 @@ class RefreshTokenActionTest extends TestCase
     public function testShouldThrowInvalidTokenExceptionWhenUserRelatedWithTokenDoesNotExist()
     {
         // Expect
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
         $this->expectException(InvalidTokenException::class);
         $this->expectExceptionMessage(sprintf('Invalid JWT Token - User "%s" does not exist', '3fc713ae-f1b8-43a6-95d2-e6d573fab41a'));
 
@@ -269,7 +377,7 @@ class RefreshTokenActionTest extends TestCase
             [FindTokenByRefreshTokenUuidQuery::class, Token::getTableName(), '60efd5f1-d831-4c02-863d-4ee11843fc2e'],
             [EntityQuery::class, User::getTableName(), '3fc713ae-f1b8-43a6-95d2-e6d573fab41a']
         )->willReturnOnConsecutiveCalls(
-            $this->getCurrentTokenData(),
+            $this->token->jsonSerialize(),
             $this->throwException(new NotFoundException(sprintf('Record not found for query "%s"', EntityQuery::class), 404))
         );
         $data['db'] = $db;
@@ -282,6 +390,9 @@ class RefreshTokenActionTest extends TestCase
     public function testShouldThrowMissingTokenExceptionWhenOptionValidateJwtIsEnabledAndTokenNotSent()
     {
         // Expect
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
         $this->expectException(MissingTokenException::class);
         $this->expectExceptionMessage('JWT Token not found');
 
@@ -305,6 +416,9 @@ class RefreshTokenActionTest extends TestCase
     public function testShouldThrowJWTDecodeFailureExceptionWhenOptionValidateJwtIsEnabledAndTokenIsNotValid()
     {
         // Expect
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
         $this->expectException(JWTDecodeFailureException::class);
         $this->expectExceptionMessage('Invalid JWT Token');
 
@@ -330,6 +444,9 @@ class RefreshTokenActionTest extends TestCase
     public function testShouldThrowJWTDecodeFailureExceptionWhenOptionValidateJwtIsEnabledAndTokenIsLoadedButIsNotValid()
     {
         // Expect
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
         $this->expectException(JWTDecodeFailureException::class);
         $this->expectExceptionMessage('Invalid JWT Token');
 
@@ -355,6 +472,9 @@ class RefreshTokenActionTest extends TestCase
     public function testShouldThrowJWTDecodeFailureExceptionWhenOptionValidateJwtIsEnabledAndTokenIsNotVerified()
     {
         // Expect
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
         $this->expectException(JWTDecodeFailureException::class);
         $this->expectExceptionMessage('Unable to verify the given JWT through the given configuration. If the "lexik_jwt_authentication.encoder" encryption options have been changed since your last authentication, please renew the token. If the problem persists, verify that the configured keys/passphrase are valid.');
 
@@ -379,89 +499,37 @@ class RefreshTokenActionTest extends TestCase
 
     private function getActionData(): array
     {
-        $request = new Request();
-        $requestStack = new RequestStack();
-        $requestStack->push($request);
         $newJwt = 'new_jwt_token';
         $newRefreshTokenUuid = 'new_refresh_token_uuid';
         $newRefreshToken = 'new_refresh_token';
-
-        $userUuid = '3fc713ae-f1b8-43a6-95d2-e6d573fab41a';
-        $userData = [
-            'uuid' => $userUuid,
-            'email' => 'tom.smith@email.com',
-            'roles' => ['ROLE_USER'],
-        ];
-
         $currentToken = 'current_token';
-        $currentTokenData = $this->getCurrentTokenData();
-
         $currentRefreshToken = 'current_refresh_token';
-        $currentRefreshTokenData = [
-            'uuid' => '60efd5f1-d831-4c02-863d-4ee11843fc2e',
-            'user_uuid' => $userUuid,
-            'iat' => 1773457094,
-            'exp' => 1773460694,
-            'device' => '',
-        ];
 
-        $request->headers->set('Authorization', sprintf('Bearer %s', $currentToken));
-        $request->cookies->set('refreshToken', $currentRefreshToken);
-        $tokenExtractor = $this->createMock(TokenExtractorInterface::class);
-        $tokenExtractor->method('extract')->with($request)->willReturn($currentToken);
-        $apiRequest = new ApiRequest($requestStack);
-        $refreshTokenExtractor = new RefreshTokenExtractor('refreshToken', $apiRequest);
-        $refreshTokenEncoder = $this->createMock(JWTEncoderInterface::class);
-        $refreshTokenEncoder->method('decode')->withConsecutive(
+        $this->request->headers->set('Authorization', sprintf('Bearer %s', $currentToken));
+        $this->request->cookies->set('refreshToken', $currentRefreshToken);
+        $this->tokenExtractor->method('extract')->with($this->request)->willReturn($currentToken);
+        $this->refreshTokenEncoder->method('decode')->withConsecutive(
             [$currentRefreshToken],
             [$newRefreshToken],
             [$newRefreshToken],
         )->willReturnOnConsecutiveCalls(
-            $currentRefreshTokenData,
+            $this->refreshTokenPayload,
             ['uuid' => $newRefreshTokenUuid],
             ['uuid' => $newRefreshTokenUuid],
         );
-        $dispatcher = $this->createMock(EventDispatcherInterface::class);
-        $jwsProvider = $this->createMock(JWSProviderInterface::class);
-        $jwsProvider->method('load')->with($currentToken)->willReturn(new LoadedJWS($currentTokenData, true));
-        $jwsProvider->method('create')->willReturn(new CreatedJWS($newRefreshToken, true));
-        $db = $this->createMock(DbClient::class);
-        $db->method('fetchOne')->withConsecutive(
-            [FindTokenByRefreshTokenUuidQuery::class, Token::getTableName(), $currentTokenData['refresh_token_uuid']],
-            [EntityQuery::class, User::getTableName(), $userUuid]
-        )->willReturnOnConsecutiveCalls($currentTokenData, $userData);
-        $jwtManager = $this->createMock(JWTManager::class);
-        $jwtManager->method('create')->with(User::createFromArray($userData))->willReturn($newJwt);
-        $jwtManager->method('parse')->with($newJwt)->willReturn([
-            'uuid' => '2853c2f5-cb44-46d9-a691-ff2110ff37e5',
-            'iat' => 1673449462,
-            'exp' => 1673453062,
-            'device' => '',
-        ]);
-        $refreshTokenGenerator = new RefreshTokenGenerator($jwsProvider);
-        $jwtPayloadFactory = new JwtPayloadFactory($requestStack, $tokenExtractor, $jwsProvider);
-        $refreshTokenPayloadFactory = new RefreshTokenPayloadFactory($refreshTokenExtractor, $refreshTokenEncoder);
+        $this->jwsProvider->method('load')->with($currentToken)->willReturn(new LoadedJWS($this->jwtPayload, true));
+        $this->jwsProvider->method('create')->willReturn(new CreatedJWS($newRefreshToken, true));
+        $this->jwtManager->method('create')->with($this->user)->willReturn($newJwt);
+        $this->jwtManager->method('parse')->with($newJwt)->willReturn($this->newJwtPayload);
 
         return [
-            'jwtPayloadFactory' => $jwtPayloadFactory,
-            'refreshTokenPayloadFactory' => $refreshTokenPayloadFactory,
-            'refreshTokenEncoder' => $refreshTokenEncoder,
-            'db' => $db,
-            'dispatcher' => $dispatcher,
-            'jwtManager' => $jwtManager,
-            'refreshTokenGenerator' => $refreshTokenGenerator,
-        ];
-    }
-
-    private function getCurrentTokenData(): array
-    {
-        return [
-            'uuid' => '25feb06b-0c1e-4416-86fc-706134f2c7de',
-            'user_uuid' => '3fc713ae-f1b8-43a6-95d2-e6d573fab41a',
-            'iat' => 1673457094,
-            'exp' => 1673460694,
-            'device' => '',
-            'refresh_token_uuid' => '60efd5f1-d831-4c02-863d-4ee11843fc2e',
+            'jwtPayloadFactory' => $this->jwtPayloadFactory,
+            'refreshTokenPayloadFactory' => $this->refreshTokenPayloadFactory,
+            'refreshTokenEncoder' => $this->refreshTokenEncoder,
+            'db' => $this->db,
+            'dispatcher' => $this->dispatcher,
+            'jwtManager' => $this->jwtManager,
+            'refreshTokenGenerator' => $this->refreshTokenGenerator,
         ];
     }
 }
