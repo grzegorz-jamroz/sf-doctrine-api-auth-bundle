@@ -30,12 +30,6 @@ class JWTAuthenticatedEventSubscriber implements EventSubscriberInterface
 
     public function verifyToken(JWTAuthenticatedEvent $event)
     {
-        $user = $event->getToken()->getUser();
-
-        if (!$user instanceof EntityInterface) {
-            return;
-        }
-
         try {
             $uuid = Transform::toString($event->getPayload()['uuid'] ?? '');
             $this->db->fetchOne(EntityQuery::class, $this->tokenClassName::getTableName(), $uuid);

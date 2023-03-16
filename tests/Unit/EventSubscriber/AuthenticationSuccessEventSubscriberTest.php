@@ -25,7 +25,6 @@ class AuthenticationSuccessEventSubscriberTest extends BundleTestCase
     private JWTManager $jwtManager;
     private RefreshTokenGenerator $refreshTokenGenerator;
     private JWTEncoderInterface $refreshTokenEncoder;
-    private User $user;
 
     protected function setUp(): void
     {

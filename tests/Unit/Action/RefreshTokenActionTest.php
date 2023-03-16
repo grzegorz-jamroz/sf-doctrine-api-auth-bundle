@@ -45,7 +45,6 @@ class RefreshTokenActionTest extends BundleTestCase
     private EventDispatcherInterface $dispatcher;
     private RefreshTokenPayloadFactory $refreshTokenPayloadFactory;
     private RefreshTokenActionVariant $action;
-    private User $user;
     private array $refreshTokenPayload;
 
     protected function setUp(): void
@@ -65,12 +64,6 @@ class RefreshTokenActionTest extends BundleTestCase
         $this->refreshTokenExtractor = new RefreshTokenExtractor('refreshToken', $this->apiRequest);
         $this->dispatcher = $this->createMock(EventDispatcherInterface::class);
         $this->refreshTokenPayloadFactory = new RefreshTokenPayloadFactory($this->refreshTokenExtractor, $this->refreshTokenEncoder);
-        $this->user = User::createFromArray([
-            'uuid' => '3fc713ae-f1b8-43a6-95d2-e6d573fab41a',
-            'email' => 'tom.smith@email.com',
-            'roles' => ['ROLE_USER'],
-            'password' => '123'
-        ]);
         $this->refreshTokenPayload = [
             'iat' => 1573457094,
             'exp' => 1573460694,
@@ -93,14 +86,6 @@ class RefreshTokenActionTest extends BundleTestCase
             'roles' => $this->user->getRoles(),
             'username' => $this->user->getEmail(),
         ];
-        $this->token = Token::createFromArray([
-            'uuid' => '25feb06b-0c1e-4416-86fc-706134f2c7de',
-            'user_uuid' => '3fc713ae-f1b8-43a6-95d2-e6d573fab41a',
-            'iat' => 1673457094,
-            'exp' => 1673460694,
-            'device' => '',
-            'refresh_token_uuid' => '60efd5f1-d831-4c02-863d-4ee11843fc2e',
-        ]);
         $this->action = RefreshTokenActionVariant::createFromArray($this->getActionData());
     }
 
