@@ -37,7 +37,7 @@ class AuthenticationSuccessEventSubscriberTest extends BundleTestCase
         $this->refreshTokenEncoder = $this->createMock(JWTEncoderInterface::class);
         $this->eventSubscriber = AuthenticationSuccessEventSubscriberVariant::createFromArray([
             'jwtManager' => $this->jwtManager,
-            'db' => $this->dbal,
+            'dbal' => $this->dbal,
             'refreshTokenGenerator' => $this->refreshTokenGenerator,
             'refreshTokenEncoder' => $this->refreshTokenEncoder,
         ]);

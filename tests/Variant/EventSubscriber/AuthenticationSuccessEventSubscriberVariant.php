@@ -30,7 +30,7 @@ class AuthenticationSuccessEventSubscriberVariant extends AuthenticationSuccessE
             Transform::toBool($data['returnRefreshTokenInBody'] ?? false),
             Transform::toArray($data['cookieSettings'] ?? $defaultCookieSettings),
             $data['jwtManager'],
-            $data['db'],
+            $data['dbal'],
             $data['refreshTokenGenerator'],
             $data['refreshTokenEncoder'],
         );

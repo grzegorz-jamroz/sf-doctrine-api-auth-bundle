@@ -25,7 +25,7 @@ class AuthenticationSuccessEventSubscriber implements EventSubscriberInterface
         private bool $returnRefreshTokenInBody,
         private array $cookieSettings,
         private JWTTokenManagerInterface $jwtManager,
-        private Connection $db,
+        private Connection $dbal,
         private RefreshTokenGeneratorInterface $refreshTokenGenerator,
         private JWTEncoderInterface $refreshTokenEncoder,
     ) {
@@ -50,7 +50,7 @@ class AuthenticationSuccessEventSubscriber implements EventSubscriberInterface
         $payload = $this->jwtManager->parse($data['token'] ?? '');
         $refreshToken = $this->refreshTokenGenerator->generate();
         $refreshTokenPayload = $this->refreshTokenEncoder->decode($refreshToken);
-        $this->db->insert(
+        $this->dbal->insert(
             $this->tokenClassName::getTableName(),
             [
                 'uuid' => $payload['uuid'],

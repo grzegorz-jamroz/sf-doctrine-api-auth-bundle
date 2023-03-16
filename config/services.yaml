@@ -43,7 +43,7 @@ services:
       $returnRefreshTokenInBody: '%ifrost_doctrine_api_auth.return_refresh_token_in_body%'
       $cookieSettings: '%ifrost_doctrine_api_auth.cookie%'
       $jwtManager: '@lexik_jwt_authentication.jwt_manager'
-      $db: '@doctrine.dbal.default_connection'
+      $dbal: '@doctrine.dbal.default_connection'
       $refreshTokenGenerator: '@ifrost_doctrine_api_auth.refresh_token_generator'
       $refreshTokenEncoder: '@ifrost_doctrine_api_auth.encoder.lcobucci'
   Ifrost\DoctrineApiAuthBundle\EventSubscriber\JWTAuthenticatedEventSubscriber:
