@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Ifrost\DoctrineApiAuthBundle\Event;
 
+use Ifrost\DoctrineApiAuthBundle\Entity\ApiUserInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\EventDispatcher\Event;
 
 class TokenRefreshSuccessEvent extends Event
@@ -13,7 +13,7 @@ class TokenRefreshSuccessEvent extends Event
     public function __construct(
         private array $data,
         private JsonResponse $response,
-        private UserInterface $user
+        private ApiUserInterface $user
     ) {
     }
 
@@ -38,7 +38,7 @@ class TokenRefreshSuccessEvent extends Event
         return $this->response;
     }
 
-    public function getUser(): UserInterface
+    public function getUser(): ApiUserInterface
     {
         return $this->user;
     }

@@ -36,11 +36,13 @@ class BeforeTest extends TestCase
                 iat INT NOT NULL, 
                 exp INT NOT NULL, 
                 device VARCHAR(255) DEFAULT NULL, 
-                refresh_token VARCHAR(255) NOT NULL, 
-                INDEX IDX_5F37A13BABFE1C6F (user_uuid), 
+                refresh_token_uuid CHAR(36) NOT NULL COMMENT '(DC2Type:uuid)',                
+                UNIQUE INDEX UNIQ_5F37A13B724FCBF2 (refresh_token_uuid),
+                INDEX IDX_5F37A13BABFE1C6F (user_uuid),
                 PRIMARY KEY(uuid)
-            ) ENGINE = InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci`
+            ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB
         SQL;
         $controller->getDbal()->executeStatement($sql);
     }
 }
+
