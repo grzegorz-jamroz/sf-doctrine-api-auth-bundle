@@ -69,10 +69,6 @@ class RefreshTokenAction
             throw new InvalidTokenException('Invalid Refresh Token');
         }
 
-        if ($payload['uuid'] !== $token->getRefreshTokenUuid()) {
-            throw new InvalidTokenException('Invalid Refresh Token');
-        }
-
         $user = $this->getUser($token->getUserUuid());
         $data = $this->updateToken($token->getUuid(), $user);
         $this->setCookie($data[$this->tokenParameterName], $response);

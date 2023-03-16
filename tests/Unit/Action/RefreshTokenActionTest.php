@@ -174,6 +174,32 @@ class RefreshTokenActionTest extends BundleTestCase
         );
     }
 
+    public function testShouldReturnResponseWithTokenAndUserInBody()
+    {
+        // Expect
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+
+        // Given
+        $data = $this->getActionData();
+        $data['returnUserInBody'] = true;
+        $action = RefreshTokenActionVariant::createFromArray($data);
+
+        // When
+        $response = $action->__invoke();
+
+        // Then
+        $this->assertInstanceOf(JsonResponse::class, $response);
+        $this->assertEquals(
+            [
+                'token' => 'new_jwt_token',
+                'user' => $this->user->jsonSerialize(),
+            ],
+            json_decode($response->getContent(), true)
+        );
+    }
+
     public function testShouldReturnResponseAndSetDefaultCookieWhenConfigEnabled()
     {
         // Expect
