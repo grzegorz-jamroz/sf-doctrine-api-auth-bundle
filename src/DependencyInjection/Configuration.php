@@ -6,6 +6,7 @@ namespace Ifrost\DoctrineApiAuthBundle\DependencyInjection;
 
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Symfony\Component\HttpFoundation\Request;
 
 class Configuration implements ConfigurationInterface
 {
@@ -38,6 +39,31 @@ class Configuration implements ConfigurationInterface
                 ->scalarNode('token_parameter_name')
                     ->defaultValue('refresh_token')
                     ->info('The default request parameter name containing the refresh token for all authenticators.')
+                ->end()
+                ->arrayNode('routes')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->arrayNode('logout')
+                            ->addDefaultsIfNotSet()
+                            ->children()
+                                ->scalarNode('path')->defaultValue('/logout')->end()
+                                ->scalarNode('name')->defaultValue('logout')->end()
+                                ->arrayNode('methods')
+                                    ->defaultValue([Request::METHOD_POST])->scalarPrototype()->end()
+                                ->end()
+                            ->end()
+                        ->end()
+                        ->arrayNode('refresh_token')
+                            ->addDefaultsIfNotSet()
+                            ->children()
+                                ->scalarNode('path')->defaultValue('token/refresh')->end()
+                                ->scalarNode('name')->defaultValue('refresh_token')->end()
+                                ->arrayNode('methods')
+                                    ->defaultValue([Request::METHOD_POST])->scalarPrototype()->end()
+                                ->end()
+                            ->end()
+                        ->end()
+                    ->end()
                 ->end()
                 ->arrayNode('refresh_token_action')
                     ->addDefaultsIfNotSet()

@@ -18,7 +18,7 @@ class TokenRefreshAfterGetUserDataEventTest extends TestCase
         // When & Then
         $this->assertEquals(
             User::class,
-            $event->getEntityClassName(),
+            $event->getUserClassName(),
         );
     }
 

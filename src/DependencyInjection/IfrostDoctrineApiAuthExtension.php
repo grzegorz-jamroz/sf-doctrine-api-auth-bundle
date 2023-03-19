@@ -33,6 +33,8 @@ class IfrostDoctrineApiAuthExtension extends Extension
         $container->setParameter('ifrost_doctrine_api_auth.return_user_in_body', $config['return_user_in_body']);
         $container->setParameter('ifrost_doctrine_api_auth.return_refresh_token_in_body', $config['return_refresh_token_in_body']);
         $container->setParameter('ifrost_doctrine_api_auth.cookie', $config['cookie'] ?? []);
+        $container->setParameter('ifrost_doctrine_api_auth.routes', $config['routes']);
+
         $this->setTokenEntity($config, $container);
         $this->setUserEntity($config, $container);
 

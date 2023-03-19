@@ -32,6 +32,8 @@ services:
     alias: Ifrost\DoctrineApiAuthBundle\Payload\JwtPayloadFactory
 
   Ifrost\DoctrineApiAuthBundle\Routing\DoctrineApiAuthLoader:
+    arguments:
+      $routes: '%ifrost_doctrine_api_auth.routes%'
     tags: [routing.route_loader]
   Ifrost\DoctrineApiAuthBundle\EventSubscriber\AuthenticationSuccessEventSubscriber:
     tags: [kernel.event_subscriber]

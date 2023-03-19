@@ -9,14 +9,14 @@ use Symfony\Contracts\EventDispatcher\Event;
 class TokenRefreshAfterGetUserDataEvent extends Event
 {
     public function __construct(
-        private string $entityClassName,
+        readonly private string $userClassName,
         private array $data,
     ) {
     }
 
-    public function getEntityClassName(): string
+    public function getUserClassName(): string
     {
-        return $this->entityClassName;
+        return $this->userClassName;
     }
 
     /**

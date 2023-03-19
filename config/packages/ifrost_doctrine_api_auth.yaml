@@ -7,6 +7,15 @@ ifrost_doctrine_api_auth:
   return_refresh_token_in_body: false
   ttl: 2592000
   token_parameter_name: 'refreshToken'
+  routes:
+    logout:
+      path: '/logout'
+      name: 'logout'
+      methods: ['POST']
+    refresh_token:
+      path: '/token/refresh'
+      name: 'refresh_token'
+      methods: ['POST']
   refresh_token_action:
     validate_jwt: false
     after_get_user_data_subscriber: true

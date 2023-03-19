@@ -12,8 +12,8 @@ class TokenRefreshSuccessEvent extends Event
 {
     public function __construct(
         private array $data,
-        private JsonResponse $response,
-        private ApiUserInterface $user
+        private readonly JsonResponse $response,
+        private readonly ApiUserInterface $user
     ) {
     }
 

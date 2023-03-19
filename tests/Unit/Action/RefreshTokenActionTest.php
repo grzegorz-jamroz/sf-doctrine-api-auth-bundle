@@ -12,6 +12,7 @@ use Ifrost\DoctrineApiAuthBundle\Tests\Unit\BundleTestCase;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Action\RefreshTokenActionVariant;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity\Token;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity\User;
+use Ifrost\DoctrineApiAuthBundle\Tests\Variant\EventDispatcherForRefreshTokenAction;
 use Ifrost\DoctrineApiAuthBundle\TokenExtractor\RefreshTokenExtractor;
 use Ifrost\DoctrineApiAuthBundle\TokenExtractor\TokenExtractorInterface as RefreshTokenExtractorInterface;
 use Ifrost\DoctrineApiBundle\Query\Entity\EntitiesQuery;
@@ -24,6 +25,7 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTManager;
 use Lexik\Bundle\JWTAuthenticationBundle\Signature\CreatedJWS;
 use Lexik\Bundle\JWTAuthenticationBundle\Signature\LoadedJWS;
 use Lexik\Bundle\JWTAuthenticationBundle\TokenExtractor\TokenExtractorInterface;
+use PlainDataTransformer\Transform;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -44,7 +46,6 @@ class RefreshTokenActionTest extends BundleTestCase
     private RefreshTokenExtractor $refreshTokenExtractor;
     private EventDispatcherInterface $dispatcher;
     private RefreshTokenPayloadFactory $refreshTokenPayloadFactory;
-    private RefreshTokenActionVariant $action;
     private array $refreshTokenPayload;
 
     protected function setUp(): void
@@ -62,7 +63,6 @@ class RefreshTokenActionTest extends BundleTestCase
         $this->jwtPayloadFactory = new JwtPayloadFactory($this->requestStack, $this->tokenExtractor, $this->jwsProvider);
         $this->apiRequest = new ApiRequest($this->requestStack);
         $this->refreshTokenExtractor = new RefreshTokenExtractor('refreshToken', $this->apiRequest);
-        $this->dispatcher = $this->createMock(EventDispatcherInterface::class);
         $this->refreshTokenPayloadFactory = new RefreshTokenPayloadFactory($this->refreshTokenExtractor, $this->refreshTokenEncoder);
         $this->refreshTokenPayload = [
             'iat' => 1573457094,
@@ -86,7 +86,6 @@ class RefreshTokenActionTest extends BundleTestCase
             'roles' => $this->user->getRoles(),
             'username' => $this->user->getEmail(),
         ];
-        $this->action = RefreshTokenActionVariant::createFromArray($this->getActionData());
     }
 
     public function testShouldUpdateCurrentTokenRowInDatabase()
@@ -97,7 +96,7 @@ class RefreshTokenActionTest extends BundleTestCase
         $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
 
         // When
-        $this->action->__invoke();
+        RefreshTokenActionVariant::createFromArray($this->getActionData())->__invoke();
         $tokens = $this->db->fetchAll(EntitiesQuery::class, Token::getTableName());
 
         // Then
@@ -123,7 +122,7 @@ class RefreshTokenActionTest extends BundleTestCase
         $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
 
         // When
-        $response = $this->action->__invoke();
+        $response = RefreshTokenActionVariant::createFromArray($this->getActionData())->__invoke();
 
         // Then
         $this->assertInstanceOf(JsonResponse::class, $response);
@@ -251,6 +250,31 @@ class RefreshTokenActionTest extends BundleTestCase
         );
     }
 
+    public function testShouldReturnResponseWithTokenWhichHasEmptyRolesInPayloadWhenAfterGetUserDataSubscriberIsDisabled()
+    {
+        // Expect
+        $this->truncateTable(Token::getTableName());
+        $this->createUserIfNotExists($this->user);
+        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+
+        // Given
+        $data = $this->getActionData([
+            'after_get_user_data_subscriber' => false,
+        ]);
+        $action = RefreshTokenActionVariant::createFromArray($data);
+
+
+        // When
+        $response = $action->__invoke();
+
+        // Then
+        $this->assertInstanceOf(JsonResponse::class, $response);
+        $this->assertEquals(
+            ['token' => 'new_jwt_token'],
+            json_decode($response->getContent(), true)
+        );
+    }
+
     public function testShouldThrowInvalidTokenExceptionWhenTokenDoesNotExistInDatabase()
     {
         // Expect & Given
@@ -260,7 +284,7 @@ class RefreshTokenActionTest extends BundleTestCase
         $this->expectExceptionMessage('Invalid Refresh Token');
 
         // When & Then
-        $this->action->__invoke();
+        RefreshTokenActionVariant::createFromArray($this->getActionData())->__invoke();
     }
 
     public function testShouldThrowJWTDecodeFailureExceptionWhenCurrentRefreshTokenIsNotValid()
@@ -385,7 +409,7 @@ class RefreshTokenActionTest extends BundleTestCase
         $this->expectExceptionMessage(sprintf('Invalid JWT Token - User "%s" does not exist', '3fc713ae-f1b8-43a6-95d2-e6d573fab41a'));
 
         // When & Then
-        $this->action->__invoke();
+        RefreshTokenActionVariant::createFromArray($this->getActionData())->__invoke();
     }
     
     public function testShouldThrowMissingTokenExceptionWhenOptionValidateJwtIsEnabledAndTokenNotSent()
@@ -498,7 +522,7 @@ class RefreshTokenActionTest extends BundleTestCase
         $action->__invoke();
     }
 
-    private function getActionData(): array
+    private function getActionData(array $data = []): array
     {
         $newJwt = 'new_jwt_token';
         $newRefreshTokenUuid = '3e1bbccb-ff5a-448c-b160-82990d7dc49b';
@@ -520,6 +544,22 @@ class RefreshTokenActionTest extends BundleTestCase
         );
         $this->jwsProvider->method('load')->with($currentToken)->willReturn(new LoadedJWS($this->jwtPayload, true));
         $this->jwsProvider->method('create')->willReturn(new CreatedJWS($newRefreshToken, true));
+
+        if (Transform::toBool($data['after_get_user_data_subscriber'] ?? true)) {
+            $this->dispatcher = new EventDispatcherForRefreshTokenAction($this->user->jsonSerialize());
+        } else {
+            $this->dispatcher = new EventDispatcherForRefreshTokenAction();
+            $this->user = User::createFromArray([
+                'uuid' => $this->user->getUuid(),
+                'email' => $this->user->getEmail(),
+                'password' => $this->user->getPassword(),
+            ]);
+            $this->newJwtPayload = [
+                ...$this->newJwtPayload,
+                'roles' => [],
+            ];
+        }
+
         $this->jwtManager->method('create')->with($this->user)->willReturn($newJwt);
         $this->jwtManager->method('parse')->with($newJwt)->willReturn($this->newJwtPayload);
 

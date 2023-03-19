@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ifrost\DoctrineApiAuthBundle\Action;
 
+use Ifrost\DoctrineApiAuthBundle\Entity\ApiUserInterface;
 use Ifrost\DoctrineApiAuthBundle\Entity\TokenInterface;
 use Ifrost\DoctrineApiAuthBundle\Event\TokenRefreshAfterGetUserDataEvent;
 use Ifrost\DoctrineApiAuthBundle\Event\TokenRefreshSuccessEvent;
@@ -103,11 +104,10 @@ class RefreshTokenAction
         );
     }
 
-    private function getUser(string $userUuid): UserInterface
+    private function getUser(string $userUuid): ApiUserInterface
     {
         try {
             $userData = $this->db->fetchOne(EntityQuery::class, $this->userClassName::getTableName(), $userUuid);
-            $userData['roles'] = json_decode($userData['roles'] ?? [], true);
             $event = new TokenRefreshAfterGetUserDataEvent($this->userClassName, $userData);
             $this->dispatcher->dispatch($event, Events::TOKEN_REFRESH_AFTER_GET_USER_DATA);
 
