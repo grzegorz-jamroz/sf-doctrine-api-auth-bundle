@@ -1,12 +1,13 @@
 <h1 align="center">Ifrost Doctrine Api Auth Bundle for Symfony</h1>
 
 <p align="center">
-    <strong>Bundle provides authorization for Symfony Doctrine Api bundle</strong>
+    <strong>Bundle provides authorization for Symfony Doctrine Api bundle with JWT and Refresh Token</strong>
 </p>
 
 <p align="center">
-    <img src="https://img.shields.io/badge/php->=8.1-blue?colorB=%238892BF" alt="Code Coverage">  
-    <img src="https://img.shields.io/badge/release-v6.1.0-blue" alt="Release Version">   
+    <img src="https://img.shields.io/badge/php->=8.2-blue?colorB=%238892BF" alt="Code Coverage">  
+    <img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="Code Coverage">   
+    <img src="https://img.shields.io/badge/release-v6.2.0-blue" alt="Release Version">   
 </p>
 
 ## Installation
@@ -435,7 +436,7 @@ you should get output:
   _preview_error      ANY      ANY      ANY    /_error/{code}.{_format}
   login               ANY      ANY      ANY    /login
   logout              POST     ANY      ANY    /logout
-  token_refresh       POST     ANY      ANY    /token/refresh
+  refresh_token       POST     ANY      ANY    /token/refresh
  ------------------- -------- -------- ------ --------------------------
 ```
 
@@ -578,3 +579,7 @@ example response:
   "refreshToken": "r8sYCwAz1MIMKVrScHZ2rmB4Uqul9T_32IMc9MYIEm2BbE2TTzcZ5QmdTixNJWTHbhCySt2Kzj0CTZajtrmMKNgp22i1jYPj.p2lII8MgnTJgYVTDMQGZiRMGU1UDOZiQkd1JVFjgm9MgM9Du1zTO2hzZ4MCqZbOX4eiS2Y5rOXzyMXv-TOUrMN_IbXWNcU7gD3VNzCmZS3cJmVeRZwMcAbPNCBzWDJYko0N1ZizMOSMwh0M2xicjtzDkM2T9i3yF9YMNkKS5Q2NHMMilNEtMTozUOcd9QQGFYYBOcRiLJMA4FO3p5sY0Hh1vYdXY2ygWzexKr27MgC1LgNdMU-0ZOvP2IUskN18CqUYHbVSK2HI9SDTMi2jrKExcxTxRLDZYLsxNwVgczQDPkRZ8FPO4MTHm8kllE5SjMckqGjN0MMM2S1ZF.wz1eJzVsCLzSe22AVODQwXzDjFjMD6UQ3Mu9z0Yv34X11zIZO3H1dMe8zVm2tDDqMmZA87YMszM0UelYliJMJPNR2sDUZN86fk2J3dJF0bZ2mOiA7ykdNOATDv0fXpJ35wYzEYIj_jMVdl-WZM2z8GQzIlRMREIjf3LQEMkagBDizft0OzmugQxM1QM32MITQyRoiEnjzJ4qe9i1BCMyl12ySjkEQqGSD-ghy29T7qGiTZ0l7Ic7FMcKHyFc4HWNiYAgS1j7jjwzMkzMjB"
 }
 ```
+
+## Configuration
+
+You can find default configuration [here](config/packages/ifrost_doctrine_api_auth.yaml). 
