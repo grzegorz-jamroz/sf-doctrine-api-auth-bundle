@@ -40,65 +40,7 @@ ifrost_doctrine_api_auth:
 # ...
 ```
 
-2. Generate the SSL keys [source](https://symfony.com/bundles/LexikJWTAuthenticationBundle/current/index.html#generate-the-ssl-keys)
-
-```
-php bin/console lexik:jwt:generate-keypair
-```
-
-3. Update security configuration [source](https://symfony.com/bundles/LexikJWTAuthenticationBundle/current/index.html#symfony-5-3-and-higher)
-
-example:
-
-```yaml
-# config/packages/security.yaml
-security:
-  # ...
-  enable_authenticator_manager: true
-    # https://symfony.com/doc/current/security.html#registering-the-user-hashing-passwords
-    password_hashers:
-      Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
-    # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
-    providers:
-      # used to reload user from session & other features (e.g. switch_user)
-      app_user_provider:
-        entity:
-          class: App\Entity\User
-          property: email
-  firewalls:
-    # ...
-    login:
-      pattern: ^/login
-      stateless: true
-      json_login:
-        check_path: /login
-        success_handler: lexik_jwt_authentication.handler.authentication_success
-        failure_handler: lexik_jwt_authentication.handler.authentication_failure
-    refresh:
-      pattern: ^/token/refresh
-      stateless: true
-    logout:
-      pattern: ^/logout
-      stateless: true
-    api:
-      pattern: ^/
-      stateless: true
-      jwt: ~
-    main:
-      lazy: true
-      provider: app_user_provider
-    # ...
-  # Easy way to control access for large sections of your site
-  # Note: Only the *first* access control that matches will be used
-  access_control:
-    - { path: ^/login,          roles: PUBLIC_ACCESS }
-    - { path: ^/token/refresh,  roles: PUBLIC_ACCESS }
-    - { path: ^/logout,         roles: PUBLIC_ACCESS }
-    - { path: ^/,               roles: IS_AUTHENTICATED_FULLY }
-  # ...
-```
-
-4. Create User entity which implements [ApiUserInterface](src/Entity/ApiUserInterface.php)
+2. Create User entity which implements [ApiUserInterface](src/Entity/ApiUserInterface.php)
 
 example:
 
@@ -253,7 +195,7 @@ class User implements ApiUserInterface
 
 ```
 
-5. Create Token entity with implements [TokenInterface](src/Entity/TokenInterface.php)
+3. Create Token entity with implements [TokenInterface](src/Entity/TokenInterface.php)
 
 example:
 
@@ -382,6 +324,73 @@ class Token implements TokenInterface
 }
 ```
 
+4. Create `config/packages/ifrost_doctrine_api_auth.yaml` file and add:
+
+```yaml
+# config/packages/ifrost_doctrine_api_auth.yaml
+ifrost_doctrine_api_auth:
+  token_entity: 'App\Entity\Token'
+  user_entity: 'App\Entity\User'
+```
+
+5. Generate the SSL keys [source](https://symfony.com/bundles/LexikJWTAuthenticationBundle/current/index.html#generate-the-ssl-keys)
+
+```
+php bin/console lexik:jwt:generate-keypair
+```
+
+6. Update security configuration [source](https://symfony.com/bundles/LexikJWTAuthenticationBundle/current/index.html#symfony-5-3-and-higher)
+
+example:
+
+```yaml
+# config/packages/security.yaml
+security:
+  # ...
+  enable_authenticator_manager: true
+  # https://symfony.com/doc/current/security.html#registering-the-user-hashing-passwords
+  password_hashers:
+    Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
+  # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
+  providers:
+    # used to reload user from session & other features (e.g. switch_user)
+    app_user_provider:
+      entity:
+        class: App\Entity\User
+        property: email
+  firewalls:
+    # ...
+    login:
+      pattern: ^/login
+      stateless: true
+      json_login:
+        check_path: /login
+        success_handler: lexik_jwt_authentication.handler.authentication_success
+        failure_handler: lexik_jwt_authentication.handler.authentication_failure
+    refresh:
+      pattern: ^/token/refresh
+      stateless: true
+    logout:
+      pattern: ^/logout
+      stateless: true
+    api:
+      pattern: ^/
+      stateless: true
+      jwt: ~
+    main:
+      lazy: true
+      provider: app_user_provider
+    # ...
+  # Easy way to control access for large sections of your site
+  # Note: Only the *first* access control that matches will be used
+  access_control:
+    - { path: ^/login,          roles: PUBLIC_ACCESS }
+    - { path: ^/token/refresh,  roles: PUBLIC_ACCESS }
+    - { path: ^/logout,         roles: PUBLIC_ACCESS }
+    - { path: ^/,               roles: IS_AUTHENTICATED_FULLY }
+  # ...
+```
+
 6. Configure your Symfony App Databse [source](https://symfony.com/doc/current/doctrine.html)
   - configure the Database in your `.env` file
     ```
@@ -405,15 +414,6 @@ class Token implements TokenInterface
     ```
     php bin/console doctrine:migrations:migrate
     ```
-
-7. Create `config/packages/ifrost_doctrine_api_auth.yaml` file and add:
-
-```yaml
-# config/packages/ifrost_doctrine_api_auth.yaml
-ifrost_doctrine_api_auth:
-  token_entity: 'App\Entity\Token'
-  user_entity: 'App\Entity\User'
-```
 
 8. Clear cache:
 
