@@ -40,7 +40,21 @@ ifrost_doctrine_api_auth:
 # ...
 ```
 
-2. Create User entity which implements [ApiUserInterface](src/Entity/ApiUserInterface.php)
+2. Configure Doctrine to store UUIDs as binary strings
+```yaml
+# config/packages/doctrine.yaml
+doctrine:
+    dbal:
+        types:
+            uuid_binary:  Ramsey\Uuid\Doctrine\UuidBinaryType
+# Uncomment if using doctrine/orm <2.8
+        # mapping_types:
+            # uuid_binary: binary
+```
+
+**Note:** It is possible to configure Doctrine to store UUIDs in different way - you can read about it [here](https://github.com/ramsey/uuid-doctrine). Please note that bundle will work only with UUIDs stored as binary types.
+
+3. Create User entity which implements [ApiUserInterface](src/Entity/ApiUserInterface.php)
 
 example:
 
@@ -52,6 +66,9 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use Ifrost\DoctrineApiAuthBundle\Entity\ApiUserInterface;
 use PlainDataTransformer\Transform;
+use Ramsey\Uuid\Doctrine\UuidV7Generator;
+use Ramsey\Uuid\Uuid;
+use Ramsey\Uuid\UuidInterface;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
@@ -59,8 +76,10 @@ use Symfony\Component\Security\Core\User\UserInterface;
 class User implements ApiUserInterface
 {
     #[ORM\Id]
-    #[ORM\Column(type: 'uuid', length: 36, unique: true)]
-    private string $uuid;
+    #[ORM\Column(type: "uuid_binary", unique: true)]
+    #[ORM\GeneratedValue(strategy: "CUSTOM")]
+    #[ORM\CustomIdGenerator(class: UuidV7Generator::class)]
+    private UuidInterface $uuid;
 
     #[ORM\Column(length: 180, unique: true)]
     private string $email;
@@ -78,7 +97,7 @@ class User implements ApiUserInterface
     private array $roles;
 
     public function __construct(
-        string $uuid,
+        UuidInterface $uuid,
         string $email,
         string $password = '',
         array $roles = [],
@@ -89,7 +108,7 @@ class User implements ApiUserInterface
         $this->roles = $roles;
     }
 
-    public function getUuid(): string
+    public function getUuid(): UuidInterface
     {
         return $this->uuid;
     }
@@ -159,23 +178,10 @@ class User implements ApiUserInterface
         ];
     }
 
-    public static function createFromArray(array $data): static|self
-    {
-        return new self(
-            Transform::toString($data['uuid'] ?? ''),
-            Transform::toString($data['email'] ?? ''),
-            Transform::toString($data['password'] ?? ''),
-            Transform::toArray($data['roles'] ?? []),
-        );
-    }
-
-    /**
-     * @return array<string, string>
-     */
     public function jsonSerialize(): array
     {
         return [
-            'uuid' => $this->uuid,
+            'uuid' => (string) $this->uuid,
             'email' => $this->email,
             'roles' => $this->getRoles(),
         ];
@@ -183,19 +189,38 @@ class User implements ApiUserInterface
 
     public function getWritableFormat(): array
     {
-        $data = $this->jsonSerialize();
-
         return [
-            ...$data,
+            ...$this->jsonSerialize(),
+            'uuid' => $this->uuid->getBytes(),
             'password' => $this->password,
-            'roles' => json_encode($data['roles']),
+            'roles' => json_encode($this->getRoles()),
         ];
+    }
+    
+        public static function createFromArray(array $data): static|self
+    {
+        return new self(
+            $data['uuid'] ?? Uuid::uuid7(),
+            Transform::toString($data['email'] ?? ''),
+            Transform::toString($data['password'] ?? ''),
+            Transform::toArray($data['roles'] ?? []),
+        );
+    }
+
+    public static function createFromRequest(array $data): static|self
+    {
+        return new self(
+            isset($data['uuid']) ? Uuid::fromString($data['uuid']) : Uuid::uuid7(),
+            Transform::toString($data['email'] ?? ''),
+            Transform::toString($data['password'] ?? ''),
+            Transform::toArray($data['roles'] ?? []),
+        );
     }
 }
 
 ```
 
-3. Create Token entity with implements [TokenInterface](src/Entity/TokenInterface.php)
+4. Create Token entity with implements [TokenInterface](src/Entity/TokenInterface.php)
 
 example:
 
@@ -207,17 +232,25 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use Ifrost\DoctrineApiAuthBundle\Entity\TokenInterface;
 use PlainDataTransformer\Transform;
+use Ramsey\Uuid\Doctrine\UuidV7Generator;
+use Ramsey\Uuid\Uuid;
+use Ramsey\Uuid\UuidInterface;
 
 #[ORM\Entity(readOnly: true)]
 class Token implements TokenInterface
 {
     #[ORM\Id]
-    #[ORM\Column(type: 'uuid', length: 36, unique: true)]
+    #[ORM\Column(type: "uuid_binary", unique: true)]
+    #[ORM\GeneratedValue(strategy: "CUSTOM")]
+    #[ORM\CustomIdGenerator(class: UuidV7Generator::class)]
     private string $uuid;
 
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(name: 'user_uuid', referencedColumnName: 'uuid', nullable: false)]
     private string $userUuid;
+    
+    #[ORM\Column(type: "uuid_binary", unique: true)]
+    private string $refreshTokenUuid;
 
     #[ORM\Column]
     private int $iat;
@@ -228,33 +261,35 @@ class Token implements TokenInterface
     #[ORM\Column(length: 255, nullable: true)]
     private string $device;
 
-    #[ORM\Column(type: 'uuid', length: 36, unique: true)]
-    private string $refreshTokenUuid;
-
     public function __construct(
-        string $uuid,
-        string $userUuid,
+        UuidInterface $uuid,
+        UuidInterface $userUuid,
+        UuidInterface $refreshTokenUuid,
         int $iat,
         int $exp,
         string $device,
-        string $refreshTokenUuid,
     ) {
         $this->uuid = $uuid;
         $this->userUuid = $userUuid;
+        $this->refreshTokenUuid = $refreshTokenUuid;
         $this->iat = $iat;
         $this->exp = $exp;
         $this->device = $device;
-        $this->refreshTokenUuid = $refreshTokenUuid;
     }
 
-    public function getUuid(): string
+    public function getUuid(): UuidInterface
     {
         return $this->uuid;
     }
 
-    public function getUserUuid(): string
+    public function getUserUuid(): UuidInterface
     {
         return $this->userUuid;
+    }
+    
+    public function getRefreshTokenUuid(): UuidInterface
+    {
+        return $this->refreshTokenUuid;
     }
 
     public function getIat(): int
@@ -272,11 +307,6 @@ class Token implements TokenInterface
         return $this->device;
     }
 
-    public function getRefreshTokenUuid(): string
-    {
-        return $this->refreshTokenUuid;
-    }
-
     public static function getTableName(): string
     {
         return 'token';
@@ -290,41 +320,55 @@ class Token implements TokenInterface
         return array_keys(self::createFromArray([])->jsonSerialize());
     }
 
-    public static function createFromArray(array $data): static|self
-    {
-        return new self(
-            Transform::toString($data['uuid'] ?? ''),
-            Transform::toString($data['user_uuid'] ?? ''),
-            Transform::toInt($data['iat'] ?? 0),
-            Transform::toInt($data['exp'] ?? 0),
-            Transform::toString($data['device'] ?? ''),
-            Transform::toString($data['refresh_token_uuid'] ?? ''),
-        );
-    }
-
-    /**
-     * @return array<string, string>
-     */
     public function jsonSerialize(): array
     {
         return [
-            'uuid' => $this->uuid,
-            'user_uuid' => $this->userUuid,
+            'uuid' => (string) $this->uuid,
+            'user_uuid' => (string) $this->userUuid,
+            'refresh_token_uuid' => (string) $this->refreshTokenUuid,
             'iat' => $this->iat,
             'exp' => $this->exp,
             'device' => $this->device,
-            'refresh_token_uuid' => $this->refreshTokenUuid,
         ];
     }
 
     public function getWritableFormat(): array
     {
-        return $this->jsonSerialize();
+        return [
+            ...$this->jsonSerialize(),
+            'uuid' => $this->uuid->getBytes(),
+            'user_uuid' => $this->userUuid->getBytes(),
+            'refresh_token_uuid' => $this->refreshTokenUuid->getBytes(),
+        ];
+    }
+    
+    public static function createFromArray(array $data): static|self
+    {
+        return new self(
+            $data['uuid'] ?? Uuid::uuid7(),
+            $data['user_uuid'] ?? Uuid::uuid7(),
+            $data['refresh_token_uuid'] ?? Uuid::uuid7(),
+            Transform::toInt($data['iat'] ?? 0),
+            Transform::toInt($data['exp'] ?? 0),
+            Transform::toString($data['device'] ?? ''),
+        );
+    }
+
+    public static function createFromRequest(array $data): static|self
+    {
+        return new self(
+            isset($data['uuid']) ? Uuid::fromString($data['uuid']) : Uuid::uuid7(),
+            isset($data['user_uuid']) ? Uuid::fromString($data['user_uuid']) : Uuid::uuid7(),
+            isset($data['refresh_token_uuid']) ? Uuid::fromString($data['refresh_token_uuid']) : Uuid::uuid7(),
+            Transform::toInt($data['iat'] ?? 0),
+            Transform::toInt($data['exp'] ?? 0),
+            Transform::toString($data['device'] ?? ''),
+        );
     }
 }
 ```
 
-4. Create `config/packages/ifrost_doctrine_api_auth.yaml` file and add:
+5. Create `config/packages/ifrost_doctrine_api_auth.yaml` file and add:
 
 ```yaml
 # config/packages/ifrost_doctrine_api_auth.yaml
@@ -333,13 +377,13 @@ ifrost_doctrine_api_auth:
   user_entity: 'App\Entity\User'
 ```
 
-5. Generate the SSL keys [source](https://symfony.com/bundles/LexikJWTAuthenticationBundle/current/index.html#generate-the-ssl-keys)
+6. Generate the SSL keys [source](https://symfony.com/bundles/LexikJWTAuthenticationBundle/current/index.html#generate-the-ssl-keys)
 
 ```
 php bin/console lexik:jwt:generate-keypair
 ```
 
-6. Update security configuration [source](https://symfony.com/bundles/LexikJWTAuthenticationBundle/current/index.html#symfony-5-3-and-higher)
+7. Update security configuration [source](https://symfony.com/bundles/LexikJWTAuthenticationBundle/current/index.html#symfony-5-3-and-higher)
 
 example:
 
@@ -391,7 +435,7 @@ security:
   # ...
 ```
 
-6. Configure your Symfony App Databse [source](https://symfony.com/doc/current/doctrine.html)
+8. Configure your Symfony App Databse [source](https://symfony.com/doc/current/doctrine.html)
   - configure the Database in your `.env` file
     ```
     # .env file
@@ -415,13 +459,13 @@ security:
     php bin/console doctrine:migrations:migrate
     ```
 
-8. Clear cache:
+9. Clear cache:
 
 ```
 php bin/console cache:clear
 ```
 
-9. Now you can debug your routes. Run command:
+10. Now you can debug your routes. Run command:
 
 ```
 php bin/console debug:router
@@ -440,7 +484,7 @@ you should get output:
  ------------------- -------- -------- ------ --------------------------
 ```
 
-10. Create UserController
+11. Create UserController
 
 ```php
 <?php
@@ -490,7 +534,7 @@ class UserController extends DoctrineApiController
 }
 ```
 
-11. Now you can debug your routes. Run command:
+12. Now you can debug your routes. Run command:
 
 ```
 php bin/console debug:router
@@ -515,7 +559,7 @@ you should get output:
  ---------------- -------- -------- ------ --------------------------
 ```
 
-12. Temporary set route `users_create` available to the public to make test user:
+13. Temporary set route `users_create` available to the public to make test user:
 
 ```yaml
 # config/packages/security.yaml
@@ -535,13 +579,13 @@ security:
   # ...
 ```
 
-13. Make test user:
+14. Make test user:
 
 ```
 curl -i -X POST -d '{"email":"test_user@email.com", "password":"top-secret", "roles":["ROLE_ADMIN"]}' http://your-domain.com/users
 ```
 
-14. Revert `config/packages/security.yaml` to state before point 12:
+15. Revert `config/packages/security.yaml` to state before point 12:
 
 ## Usage
 

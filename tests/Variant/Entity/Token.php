@@ -93,9 +93,6 @@ class Token implements TokenInterface
         return array_keys(self::createFromArray([])->jsonSerialize());
     }
 
-    /**
-     * @return array<string, string>
-     */
     public function jsonSerialize(): array
     {
         return [
