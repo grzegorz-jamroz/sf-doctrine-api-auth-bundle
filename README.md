@@ -7,7 +7,7 @@
 <p align="center">
     <img src="https://img.shields.io/badge/php->=8.2-blue?colorB=%238892BF" alt="Code Coverage">  
     <img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="Code Coverage">   
-    <img src="https://img.shields.io/badge/release-v6.2.0-blue" alt="Release Version">   
+    <img src="https://img.shields.io/badge/release-v6.3.0-blue" alt="Release Version">   
 </p>
 
 ## Installation

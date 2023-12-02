@@ -1,5 +1,5 @@
 # Changelog
-## Unreleased
+[v6.3.0] - 2023.12.02
 ### Change
 - upgrade dependencies
   - upgrade `sf-doctrine-api-bundle` to `v6.2.0`
@@ -17,5 +17,5 @@
 ### Add
 - First fully tested version
 
-
+[v6.3.0]: https://github.com/grzegorz-jamroz/sf-doctrine-api-auth-bundle/releases/tag/v6.3.0]
 [v6.2.0]: https://github.com/grzegorz-jamroz/sf-doctrine-api-auth-bundle/releases/tag/v6.2.0]
