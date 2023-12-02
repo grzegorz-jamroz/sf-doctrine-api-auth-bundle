@@ -117,9 +117,6 @@ class User implements ApiUserInterface
         ];
     }
 
-    /**
-     * @return array<string, string>
-     */
     public function jsonSerialize(): array
     {
         return [

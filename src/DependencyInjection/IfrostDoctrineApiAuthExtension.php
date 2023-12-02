@@ -26,6 +26,8 @@ class IfrostDoctrineApiAuthExtension extends Extension
         $config = $this->processConfiguration($configuration, $configs);
 
         $container->setParameter('ifrost_doctrine_api_auth.exception_listener', $config['exception_listener']);
+        $container->setParameter('ifrost_doctrine_api_auth.token_entity', $config['token_entity'] ?? null);
+        $container->setParameter('ifrost_doctrine_api_auth.user_entity', $config['user_entity'] ?? null);
         $container->setParameter('ifrost_doctrine_api_auth.ttl', $config['ttl']);
         $container->setParameter('ifrost_doctrine_api_auth.token_parameter_name', $config['token_parameter_name']);
         $container->setParameter('ifrost_doctrine_api_auth.refresh_token_action.validate_jwt', $config['refresh_token_action']['validate_jwt']);
@@ -67,7 +69,10 @@ class IfrostDoctrineApiAuthExtension extends Extension
      */
     private function setTokenEntity(array $config, ContainerBuilder $container): void
     {
-        if (Transform::toString($config['token_entity'] ?? '') !== '') {
+        if (
+            is_string($config['token_entity'])
+            && $config['token_entity'] !== ''
+        ) {
             $this->setEntity('token_entity', TokenInterface::class, $config, $container);
         }
     }
@@ -77,7 +82,10 @@ class IfrostDoctrineApiAuthExtension extends Extension
      */
     private function setUserEntity(array $config, ContainerBuilder $container): void
     {
-        if (Transform::toString($config['user_entity'] ?? '') !== '') {
+        if (
+            is_string($config['user_entity'])
+            && $config['token_entity'] !== ''
+        ) {
             $this->setEntity('user_entity', ApiUserInterface::class, $config, $container);
         }
     }
