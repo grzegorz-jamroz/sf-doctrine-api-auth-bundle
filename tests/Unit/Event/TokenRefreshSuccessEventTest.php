@@ -8,6 +8,7 @@ use Ifrost\DoctrineApiAuthBundle\Entity\ApiUserInterface;
 use Ifrost\DoctrineApiAuthBundle\Event\TokenRefreshSuccessEvent;
 use Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity\User;
 use PHPUnit\Framework\TestCase;
+use Ramsey\Uuid\Uuid;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
 class TokenRefreshSuccessEventTest extends TestCase
@@ -15,7 +16,7 @@ class TokenRefreshSuccessEventTest extends TestCase
     protected function setUp(): void
     {
         $this->user = new User(
-            '3fc713ae-f1b8-43a6-95d2-e6d573fab41a',
+            Uuid::fromString('3fc713ae-f1b8-43a6-95d2-e6d573fab41a'),
             'tom@email.com'
         );
     }

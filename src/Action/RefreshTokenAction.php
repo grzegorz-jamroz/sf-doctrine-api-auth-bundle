@@ -19,7 +19,8 @@ use Ifrost\DoctrineApiBundle\Utility\DbClient;
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\InvalidTokenException;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use PlainDataTransformer\Transform;
+use Ramsey\Uuid\Uuid;
+use Ramsey\Uuid\UuidInterface;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -95,23 +96,35 @@ class RefreshTokenAction
      */
     private function getTokenEntity(array $payload): TokenInterface
     {
+        $tokenData = $this->db->fetchOne(
+            FindTokenByRefreshTokenUuidQuery::class,
+            $this->tokenClassName::getTableName(),
+            Uuid::fromString($payload['uuid'] ?? '')->getBytes(),
+        );
+
         return $this->tokenClassName::createFromArray(
-            $this->db->fetchOne(
-                FindTokenByRefreshTokenUuidQuery::class,
-                $this->tokenClassName::getTableName(),
-                Transform::toString($payload['uuid'] ?? '')
-            )
+            [
+                ...$tokenData,
+                'uuid' => Uuid::fromBytes($tokenData['uuid']),
+                'user_uuid' => Uuid::fromBytes($tokenData['user_uuid']),
+                'refresh_token_uuid' => Uuid::fromBytes($tokenData['refresh_token_uuid']),
+            ]
         );
     }
 
-    private function getUser(string $userUuid): ApiUserInterface
+    private function getUser(UuidInterface $userUuid): ApiUserInterface
     {
         try {
-            $userData = $this->db->fetchOne(EntityQuery::class, $this->userClassName::getTableName(), $userUuid);
+            $userData = $this->db->fetchOne(EntityQuery::class, $this->userClassName::getTableName(), $userUuid->getBytes());
             $event = new TokenRefreshAfterGetUserDataEvent($this->userClassName, $userData);
             $this->dispatcher->dispatch($event, Events::TOKEN_REFRESH_AFTER_GET_USER_DATA);
 
-            return $this->userClassName::createFromArray($event->getData());
+            return $this->userClassName::createFromArray(
+                [
+                    ...$event->getData(),
+                    'uuid' => $userUuid,
+                ]
+            );
         } catch (\Exception) {
             throw new InvalidTokenException(sprintf('Invalid JWT Token - User "%s" does not exist', $userUuid));
         }
@@ -121,21 +134,23 @@ class RefreshTokenAction
      * @return array<string, string>
      */
     private function updateToken(
-        string $currentTokenUuid,
+        UuidInterface $currentTokenUuid,
         UserInterface $user,
     ): array {
         $newToken = $this->jwtManager->create($user);
         $refreshToken = $this->refreshTokenGenerator->generate();
-        $payload = $this->refreshTokenEncoder->decode($refreshToken);
+        $refreshTokenPayload = $this->refreshTokenEncoder->decode($refreshToken);
+        $newTokenPayload = $this->jwtManager->parse($newToken);
         $newTokenEntity = $this->tokenClassName::createFromArray([
-            ...$this->jwtManager->parse($newToken),
+            ...$newTokenPayload,
+            'uuid' => Uuid::fromString($newTokenPayload['uuid']),
             'user_uuid' => $user->getUuid(),
-            'refresh_token_uuid' => $payload['uuid'],
+            'refresh_token_uuid' => Uuid::fromString($refreshTokenPayload['uuid']),
         ]);
         $this->db->update(
             $this->tokenClassName::getTableName(),
             $newTokenEntity->getWritableFormat(),
-            ['uuid' => $currentTokenUuid]
+            ['uuid' => $currentTokenUuid->getBytes()]
         );
 
         return [

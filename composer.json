@@ -8,7 +8,7 @@
         }
     ],
     "require": {
-        "grzegorz-jamroz/sf-doctrine-api-bundle": "^6.1",
+        "grzegorz-jamroz/sf-doctrine-api-bundle": "^6.2",
         "lexik/jwt-authentication-bundle": "^2.16"
     },
     "autoload-dev": {

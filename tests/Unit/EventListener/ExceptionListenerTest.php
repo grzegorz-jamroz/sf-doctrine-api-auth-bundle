@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace EventListener;
+namespace Ifrost\DoctrineApiAuthBundle\Tests\Unit\EventListener;
 
 use Ifrost\DoctrineApiAuthBundle\EventListener\ExceptionListener;
 use PHPUnit\Framework\TestCase;

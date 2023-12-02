@@ -16,6 +16,7 @@ use Lexik\Bundle\JWTAuthenticationBundle\Events;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWSProvider\JWSProviderInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTManager;
 use Lexik\Bundle\JWTAuthenticationBundle\Signature\CreatedJWS;
+use Ramsey\Uuid\Uuid;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Core\User\UserInterface;
 
@@ -41,7 +42,7 @@ class AuthenticationSuccessEventSubscriberTest extends BundleTestCase
             'refreshTokenEncoder' => $this->refreshTokenEncoder,
         ]);
         $this->user = User::createFromArray([
-            'uuid' => '3fc713ae-f1b8-43a6-95d2-e6d573fab41a',
+            'uuid' => Uuid::fromString('3fc713ae-f1b8-43a6-95d2-e6d573fab41a'),
             'email' => 'tom.smith@email.com',
             'roles' => ['ROLE_USER'],
         ]);
@@ -111,12 +112,12 @@ class AuthenticationSuccessEventSubscriberTest extends BundleTestCase
         $this->assertCount(1, $tokens);
         $this->assertEquals(
             [
-                'uuid' => '2853c2f5-cb44-46d9-a691-ff2110ff37e5',
+                'uuid' => Uuid::fromString('2853c2f5-cb44-46d9-a691-ff2110ff37e5')->getBytes(),
+                'user_uuid' => $this->user->getUuid()->getBytes(),
+                'refresh_token_uuid' => Uuid::fromString('60efd5f1-d831-4c02-863d-4ee11843fc2e')->getBytes(),
                 'iat' => 1573449462,
                 'exp' => 1573453062,
                 'device' => '',
-                'user_uuid' => $this->user->getUuid(),
-                'refresh_token_uuid' => '60efd5f1-d831-4c02-863d-4ee11843fc2e',
             ],
             $tokens[0],
         );

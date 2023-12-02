@@ -26,6 +26,7 @@ use Lexik\Bundle\JWTAuthenticationBundle\Signature\CreatedJWS;
 use Lexik\Bundle\JWTAuthenticationBundle\Signature\LoadedJWS;
 use Lexik\Bundle\JWTAuthenticationBundle\TokenExtractor\TokenExtractorInterface;
 use PlainDataTransformer\Transform;
+use Ramsey\Uuid\Uuid;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -93,7 +94,9 @@ class RefreshTokenActionTest extends BundleTestCase
         // Expect & Given
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
+        $uuid = '2853c2f5-cb44-46d9-a691-ff2110ff37e5';
+        $newRefreshTokenUuid = '3e1bbccb-ff5a-448c-b160-82990d7dc49b';
 
         // When
         RefreshTokenActionVariant::createFromArray($this->getActionData())->__invoke();
@@ -103,12 +106,12 @@ class RefreshTokenActionTest extends BundleTestCase
         $this->assertCount(1, $tokens);
         $this->assertEquals(
             [
-                'uuid' => '2853c2f5-cb44-46d9-a691-ff2110ff37e5',
+                'uuid' => Uuid::fromString($uuid)->getBytes(),
+                'user_uuid' => $this->user->getUuid()->getBytes(),
+                'refresh_token_uuid' => Uuid::fromString($newRefreshTokenUuid)->getBytes(),
                 'iat' => 1573449462,
                 'exp' => 1573453062,
                 'device' => '',
-                'user_uuid' => $this->user->getUuid(),
-                'refresh_token_uuid' => '3e1bbccb-ff5a-448c-b160-82990d7dc49b',
             ],
             $tokens[0],
         );
@@ -119,7 +122,7 @@ class RefreshTokenActionTest extends BundleTestCase
         // Expect & Given
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
 
         // When
         $response = RefreshTokenActionVariant::createFromArray($this->getActionData())->__invoke();
@@ -137,7 +140,7 @@ class RefreshTokenActionTest extends BundleTestCase
         // Expect
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
 
         // Given
         $data = $this->getActionData();
@@ -163,7 +166,7 @@ class RefreshTokenActionTest extends BundleTestCase
         // Expect
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
 
         // Given
         $data = $this->getActionData();
@@ -189,7 +192,7 @@ class RefreshTokenActionTest extends BundleTestCase
         // Expect
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
 
         // Given
         $data = $this->getActionData();
@@ -222,7 +225,7 @@ class RefreshTokenActionTest extends BundleTestCase
         // Expect
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
 
         // Given
         $request = new Request();
@@ -255,7 +258,7 @@ class RefreshTokenActionTest extends BundleTestCase
         // Expect
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
 
         // Given
         $data = $this->getActionData([
@@ -292,7 +295,7 @@ class RefreshTokenActionTest extends BundleTestCase
         // Expect
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
         $this->expectException(JWTDecodeFailureException::class);
         $this->expectExceptionMessage('Invalid Refresh Token');
 
@@ -320,7 +323,7 @@ class RefreshTokenActionTest extends BundleTestCase
         // Expect
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
         $this->expectException(JWTDecodeFailureException::class);
         $this->expectExceptionMessage('Expired Refresh Token');
 
@@ -348,7 +351,7 @@ class RefreshTokenActionTest extends BundleTestCase
         // Expect
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
         $this->expectException(JWTDecodeFailureException::class);
         $this->expectExceptionMessage('Unable to verify the given Refresh Token through the given configuration. If the "lexik_jwt_authentication.encoder" encryption options have been changed since your last authentication, please renew the token. If the problem persists, verify that the configured keys/passphrase are valid.');
 
@@ -376,7 +379,7 @@ class RefreshTokenActionTest extends BundleTestCase
         // Expect
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
         $this->expectException(InvalidTokenException::class);
         $this->expectExceptionMessage('Invalid Refresh Token');
 
@@ -404,7 +407,7 @@ class RefreshTokenActionTest extends BundleTestCase
         // Expect & Given
         $this->truncateTable(Token::getTableName());
         $this->truncateTable(User::getTableName());
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
         $this->expectException(InvalidTokenException::class);
         $this->expectExceptionMessage(sprintf('Invalid JWT Token - User "%s" does not exist', '3fc713ae-f1b8-43a6-95d2-e6d573fab41a'));
 
@@ -417,7 +420,7 @@ class RefreshTokenActionTest extends BundleTestCase
         // Expect
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
         $this->expectException(MissingTokenException::class);
         $this->expectExceptionMessage('JWT Token not found');
 
@@ -443,7 +446,7 @@ class RefreshTokenActionTest extends BundleTestCase
         // Expect
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
         $this->expectException(JWTDecodeFailureException::class);
         $this->expectExceptionMessage('Invalid JWT Token');
 
@@ -471,7 +474,7 @@ class RefreshTokenActionTest extends BundleTestCase
         // Expect
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
         $this->expectException(JWTDecodeFailureException::class);
         $this->expectExceptionMessage('Invalid JWT Token');
 
@@ -499,7 +502,7 @@ class RefreshTokenActionTest extends BundleTestCase
         // Expect
         $this->truncateTable(Token::getTableName());
         $this->createUserIfNotExists($this->user);
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
         $this->expectException(JWTDecodeFailureException::class);
         $this->expectExceptionMessage('Unable to verify the given JWT through the given configuration. If the "lexik_jwt_authentication.encoder" encryption options have been changed since your last authentication, please renew the token. If the problem persists, verify that the configured keys/passphrase are valid.');
 

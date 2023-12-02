@@ -50,7 +50,7 @@ class JWTAuthenticatedEventSubscriberTest extends BundleTestCase
         // Expect
         $this->expectNotToPerformAssertions();
         $this->truncateTable(Token::getTableName());
-        $this->db->insert(Token::getTableName(), $this->token->jsonSerialize());
+        $this->db->insert(Token::getTableName(), $this->token->getWritableFormat());
 
         // Given
         $event = new JWTAuthenticatedEvent($this->jwtPayload, $this->authenticationToken);

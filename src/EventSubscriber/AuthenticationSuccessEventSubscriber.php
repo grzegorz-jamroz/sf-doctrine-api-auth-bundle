@@ -11,6 +11,7 @@ use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Event\AuthenticationSuccessEvent;
 use Lexik\Bundle\JWTAuthenticationBundle\Events;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Ramsey\Uuid\Uuid;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Response;
@@ -53,12 +54,12 @@ class AuthenticationSuccessEventSubscriber implements EventSubscriberInterface
         $this->dbal->insert(
             $this->tokenClassName::getTableName(),
             [
-                'uuid' => $payload['uuid'],
+                'uuid' => Uuid::fromString($payload['uuid'])->getBytes(),
+                'user_uuid' => $user->getUuid()->getBytes(),
+                'refresh_token_uuid' => Uuid::fromString($refreshTokenPayload['uuid'])->getBytes(),
                 'iat' => $payload['iat'],
                 'exp' => $payload['exp'],
                 'device' => $payload['device'],
-                'user_uuid' => $user->getUuid(),
-                'refresh_token_uuid' => $refreshTokenPayload['uuid'],
             ]
         );
 

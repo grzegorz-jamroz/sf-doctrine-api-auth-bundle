@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace Ifrost\DoctrineApiAuthBundle\EventSubscriber;
 
-use Ifrost\DoctrineApiBundle\Entity\EntityInterface;
 use Ifrost\DoctrineApiBundle\Query\Entity\EntityQuery;
 use Ifrost\DoctrineApiBundle\Utility\DbClient;
 use Lexik\Bundle\JWTAuthenticationBundle\Event\JWTAuthenticatedEvent;
 use Lexik\Bundle\JWTAuthenticationBundle\Events;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\InvalidTokenException;
-use PlainDataTransformer\Transform;
+use Ramsey\Uuid\Uuid;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class JWTAuthenticatedEventSubscriber implements EventSubscriberInterface
@@ -31,8 +30,8 @@ class JWTAuthenticatedEventSubscriber implements EventSubscriberInterface
     public function verifyToken(JWTAuthenticatedEvent $event)
     {
         try {
-            $uuid = Transform::toString($event->getPayload()['uuid'] ?? '');
-            $this->db->fetchOne(EntityQuery::class, $this->tokenClassName::getTableName(), $uuid);
+            $uuid = Uuid::fromString($event->getPayload()['uuid'] ?? '');
+            $this->db->fetchOne(EntityQuery::class, $this->tokenClassName::getTableName(), $uuid->getBytes());
         } catch (\Exception) {
             throw new InvalidTokenException('Invalid JWT Token');
         }

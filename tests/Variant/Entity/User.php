@@ -5,6 +5,9 @@ namespace Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use Ifrost\DoctrineApiAuthBundle\Entity\ApiUserInterface;
 use PlainDataTransformer\Transform;
+use Ramsey\Uuid\Doctrine\UuidV7Generator;
+use Ramsey\Uuid\Uuid;
+use Ramsey\Uuid\UuidInterface;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
@@ -12,8 +15,10 @@ use Symfony\Component\Security\Core\User\UserInterface;
 class User implements ApiUserInterface
 {
     #[ORM\Id]
-    #[ORM\Column(type: 'uuid', length: 36, unique: true)]
-    private string $uuid;
+    #[ORM\Column(type: "uuid_binary", unique: true)]
+    #[ORM\GeneratedValue(strategy: "CUSTOM")]
+    #[ORM\CustomIdGenerator(class: UuidV7Generator::class)]
+    private UuidInterface $uuid;
 
     #[ORM\Column(length: 180, unique: true)]
     private string $email;
@@ -31,7 +36,7 @@ class User implements ApiUserInterface
     private array $roles;
 
     public function __construct(
-        string $uuid,
+        UuidInterface $uuid,
         string $email,
         string $password = '',
         array $roles = [],
@@ -42,7 +47,7 @@ class User implements ApiUserInterface
         $this->roles = $roles;
     }
 
-    public function getUuid(): string
+    public function getUuid(): UuidInterface
     {
         return $this->uuid;
     }
@@ -90,7 +95,7 @@ class User implements ApiUserInterface
     /**
      * @see UserInterface
      */
-    public function eraseCredentials()
+    public function eraseCredentials(): void
     {
         // If you store any temporary, sensitive data on the user, clear it here
         // $this->plainPassword = null;
@@ -112,23 +117,13 @@ class User implements ApiUserInterface
         ];
     }
 
-    public static function createFromArray(array $data): static|self
-    {
-        return new self(
-            Transform::toString($data['uuid'] ?? ''),
-            Transform::toString($data['email'] ?? ''),
-            Transform::toString($data['password'] ?? ''),
-            Transform::toArray($data['roles'] ?? []),
-        );
-    }
-
     /**
      * @return array<string, string>
      */
     public function jsonSerialize(): array
     {
         return [
-            'uuid' => $this->uuid,
+            'uuid' => (string) $this->uuid,
             'email' => $this->email,
             'roles' => $this->getRoles(),
         ];
@@ -136,12 +131,31 @@ class User implements ApiUserInterface
 
     public function getWritableFormat(): array
     {
-        $data = $this->jsonSerialize();
-
         return [
-            ...$data,
+            ...$this->jsonSerialize(),
+            'uuid' => $this->uuid->getBytes(),
             'password' => $this->password,
-            'roles' => json_encode($data['roles']),
+            'roles' => json_encode($this->getRoles()),
         ];
+    }
+
+    public static function createFromArray(array $data): static|self
+    {
+        return new self(
+            $data['uuid'] ?? Uuid::uuid7(),
+            Transform::toString($data['email'] ?? ''),
+            Transform::toString($data['password'] ?? ''),
+            Transform::toArray($data['roles'] ?? []),
+        );
+    }
+
+    public static function createFromRequest(array $data): static|self
+    {
+        return new self(
+            isset($data['uuid']) ? Uuid::fromString($data['uuid']) : Uuid::uuid7(),
+            Transform::toString($data['email'] ?? ''),
+            Transform::toString($data['password'] ?? ''),
+            Transform::toArray($data['roles'] ?? []),
+        );
     }
 }

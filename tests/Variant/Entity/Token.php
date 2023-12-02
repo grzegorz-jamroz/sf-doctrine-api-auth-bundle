@@ -2,21 +2,28 @@
 
 namespace Ifrost\DoctrineApiAuthBundle\Tests\Variant\Entity;
 
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Ifrost\DoctrineApiAuthBundle\Entity\TokenInterface;
 use PlainDataTransformer\Transform;
+use Ramsey\Uuid\Doctrine\UuidV7Generator;
+use Ramsey\Uuid\Uuid;
+use Ramsey\Uuid\UuidInterface;
 
 #[ORM\Entity(readOnly: true)]
 class Token implements TokenInterface
 {
     #[ORM\Id]
-    #[ORM\Column(type: 'uuid', length: 36, unique: true)]
-    private string $uuid;
+    #[ORM\Column(type: "uuid_binary", unique: true)]
+    #[ORM\GeneratedValue(strategy: "CUSTOM")]
+    #[ORM\CustomIdGenerator(class: UuidV7Generator::class)]
+    private UuidInterface $uuid;
 
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(name: 'user_uuid', referencedColumnName: 'uuid', nullable: false)]
-    private string $userUuid;
+    private UuidInterface $userUuid;
+
+    #[ORM\Column(type: "uuid_binary", unique: true)]
+    private UuidInterface $refreshTokenUuid;
 
     #[ORM\Column]
     private int $iat;
@@ -27,33 +34,35 @@ class Token implements TokenInterface
     #[ORM\Column(length: 255, nullable: true)]
     private string $device;
 
-    #[ORM\Column(type: 'uuid', length: 36, unique: true)]
-    private string $refreshTokenUuid;
-
     public function __construct(
-        string $uuid,
-        string $userUuid,
+        UuidInterface $uuid,
+        UuidInterface $userUuid,
+        UuidInterface $refreshTokenUuid,
         int $iat,
         int $exp,
         string $device,
-        string $refreshTokenUuid,
     ) {
         $this->uuid = $uuid;
         $this->userUuid = $userUuid;
+        $this->refreshTokenUuid = $refreshTokenUuid;
         $this->iat = $iat;
         $this->exp = $exp;
         $this->device = $device;
-        $this->refreshTokenUuid = $refreshTokenUuid;
     }
 
-    public function getUuid(): string
+    public function getUuid(): UuidInterface
     {
         return $this->uuid;
     }
 
-    public function getUserUuid(): string
+    public function getUserUuid(): UuidInterface
     {
         return $this->userUuid;
+    }
+
+    public function getRefreshTokenUuid(): UuidInterface
+    {
+        return $this->refreshTokenUuid;
     }
 
     public function getIat(): int
@@ -71,11 +80,6 @@ class Token implements TokenInterface
         return $this->device;
     }
 
-    public function getRefreshTokenUuid(): string
-    {
-        return $this->refreshTokenUuid;
-    }
-
     public static function getTableName(): string
     {
         return 'token';
@@ -89,35 +93,52 @@ class Token implements TokenInterface
         return array_keys(self::createFromArray([])->jsonSerialize());
     }
 
-    public static function createFromArray(array $data): static|self
-    {
-        return new self(
-            Transform::toString($data['uuid'] ?? ''),
-            Transform::toString($data['user_uuid'] ?? ''),
-            Transform::toInt($data['iat'] ?? 0),
-            Transform::toInt($data['exp'] ?? 0),
-            Transform::toString($data['device'] ?? ''),
-            Transform::toString($data['refresh_token_uuid'] ?? ''),
-        );
-    }
-
     /**
      * @return array<string, string>
      */
     public function jsonSerialize(): array
     {
         return [
-            'uuid' => $this->uuid,
-            'user_uuid' => $this->userUuid,
+            'uuid' => (string) $this->uuid,
+            'user_uuid' => (string) $this->userUuid,
+            'refresh_token_uuid' => (string) $this->refreshTokenUuid,
             'iat' => $this->iat,
             'exp' => $this->exp,
             'device' => $this->device,
-            'refresh_token_uuid' => $this->refreshTokenUuid,
         ];
     }
 
     public function getWritableFormat(): array
     {
-        return $this->jsonSerialize();
+        return [
+            ...$this->jsonSerialize(),
+            'uuid' => $this->uuid->getBytes(),
+            'user_uuid' => $this->userUuid->getBytes(),
+            'refresh_token_uuid' => $this->refreshTokenUuid->getBytes(),
+        ];
+    }
+
+    public static function createFromArray(array $data): static|self
+    {
+        return new self(
+            $data['uuid'] ?? Uuid::uuid7(),
+            $data['user_uuid'] ?? Uuid::uuid7(),
+            $data['refresh_token_uuid'] ?? Uuid::uuid7(),
+            Transform::toInt($data['iat'] ?? 0),
+            Transform::toInt($data['exp'] ?? 0),
+            Transform::toString($data['device'] ?? ''),
+        );
+    }
+
+    public static function createFromRequest(array $data): static|self
+    {
+        return new self(
+            isset($data['uuid']) ? Uuid::fromString($data['uuid']) : Uuid::uuid7(),
+            isset($data['user_uuid']) ? Uuid::fromString($data['user_uuid']) : Uuid::uuid7(),
+            isset($data['refresh_token_uuid']) ? Uuid::fromString($data['refresh_token_uuid']) : Uuid::uuid7(),
+            Transform::toInt($data['iat'] ?? 0),
+            Transform::toInt($data['exp'] ?? 0),
+            Transform::toString($data['device'] ?? ''),
+        );
     }
 }
