@@ -435,7 +435,16 @@ security:
   # ...
 ```
 
-8. Configure your Symfony App Databse [source](https://symfony.com/doc/current/doctrine.html)
+9. Important note for Apache users
+
+Apache server will strip any Authorization header not in a valid HTTP BASIC AUTH format. Read more [here](https://symfony.com/bundles/LexikJWTAuthenticationBundle/current/index.html#important-note-for-apache-users)
+To solve this problem add those rules to your VirtualHost configuration:
+
+```
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+```
+
+10. Configure your Symfony App Databse [source](https://symfony.com/doc/current/doctrine.html)
   - configure the Database in your `.env` file
     ```
     # .env file
@@ -459,13 +468,13 @@ security:
     php bin/console doctrine:migrations:migrate
     ```
 
-9. Clear cache:
+11. Clear cache:
 
 ```
 php bin/console cache:clear
 ```
 
-10. Now you can debug your routes. Run command:
+12. Now you can debug your routes. Run command:
 
 ```
 php bin/console debug:router
@@ -484,7 +493,7 @@ you should get output:
  ------------------- -------- -------- ------ --------------------------
 ```
 
-11. Create UserController
+13. Create UserController
 
 ```php
 <?php
@@ -534,7 +543,7 @@ class UserController extends DoctrineApiController
 }
 ```
 
-12. Now you can debug your routes. Run command:
+14. Now you can debug your routes. Run command:
 
 ```
 php bin/console debug:router
@@ -559,11 +568,12 @@ you should get output:
  ---------------- -------- -------- ------ --------------------------
 ```
 
-13. Temporary set route `users_create` available to the public to make test user:
+15. Temporary set route `users_create` available to the public to make test user:
 
 ```yaml
 # config/packages/security.yaml
 security:
+  enable_authenticator_manager: true
   # ...
   firewalls:
     # ...
@@ -579,13 +589,13 @@ security:
   # ...
 ```
 
-14. Make test user:
+16. Make test user:
 
 ```
 curl -i -X POST -d '{"email":"test_user@email.com", "password":"top-secret", "roles":["ROLE_ADMIN"]}' http://your-domain.com/users
 ```
 
-15. Revert `config/packages/security.yaml` to state before point 12:
+17. Revert `config/packages/security.yaml` to state before point 12:
 
 ## Usage
 
