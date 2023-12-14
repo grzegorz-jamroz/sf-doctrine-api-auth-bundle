@@ -1,5 +1,5 @@
 # Changelog
-## Unreleased
+## [v6.4.0] - 2023.12.14
 ### Add
 - Support Symfony 7
   - update dependencies
@@ -22,5 +22,6 @@
 ### Add
 - First fully tested version
 
+[v6.4.0]: https://github.com/grzegorz-jamroz/sf-doctrine-api-auth-bundle/releases/tag/v6.4.0]
 [v6.3.0]: https://github.com/grzegorz-jamroz/sf-doctrine-api-auth-bundle/releases/tag/v6.3.0]
 [v6.2.0]: https://github.com/grzegorz-jamroz/sf-doctrine-api-auth-bundle/releases/tag/v6.2.0]
