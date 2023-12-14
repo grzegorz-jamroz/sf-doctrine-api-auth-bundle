@@ -1,4 +1,9 @@
 # Changelog
+## Unreleased
+### Add
+- Support Symfony 7
+  - update dependencies
+
 [v6.3.0] - 2023.12.02
 ### Change
 - upgrade dependencies
