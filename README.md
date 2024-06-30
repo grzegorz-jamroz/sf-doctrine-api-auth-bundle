@@ -603,7 +603,7 @@ curl -i -X POST -d '{"email":"test_user@email.com", "password":"top-secret", "ro
 curl -i -X POST -d '{"username":"test_user@email.com","password":"top-secret"}' -H "Content-Type: application/json" http://your-domain.com/login
 ```
 
-example response:
+example response (if enabled return_refresh_token_in_body config parameter):
 
 ```json
 {
@@ -615,13 +615,13 @@ example response:
 
 #### Get Refresh Token
 ```
-curl -i -X POST http://grzechu.dshop.com/token/refresh -H "Content-Type: application/json" -H "Authorization: Bearer PLACE_FOR_TOKEN" -d '{"refreshToken":"PLACE_FOR_REFRESH_TOKEN"}' -b XDEBUG_SESSION=PHPSTORM
+curl -i -X POST http://127.0.0.1:8000/token/refresh -H "Content-Type: application/json" -H "Authorization: Bearer PLACE_FOR_TOKEN" -d '{"refreshToken":"PLACE_FOR_REFRESH_TOKEN"}' -b XDEBUG_SESSION=PHPSTORM
 ```
 
 or if config parameter cookie enabled:
 
 ```
-curl -i -X POST http://grzechu.dshop.com/token/refresh -H "Content-Type: application/json" -H "Authorization: Bearer PLACE_FOR_TOKEN" -b XDEBUG_SESSION=PHPSTORM -b refreshToken=PLACE_FOR_REFRESH_TOKEN
+curl -i -X POST http://127.0.0.1:8000/token/refresh -H "Content-Type: application/json" -H "Authorization: Bearer PLACE_FOR_TOKEN" -b XDEBUG_SESSION=PHPSTORM -b refreshToken=PLACE_FOR_REFRESH_TOKEN
 ```
 
 example response:
