@@ -16,7 +16,7 @@ services:
     class: Ifrost\DoctrineApiAuthBundle\TokenExtractor\RefreshTokenExtractor
     arguments:
       - '%ifrost_doctrine_api_auth.token_parameter_name%'
-      - '@Ifrost\ApiBundle\Utility\ApiRequest'
+      - '@ifrost_api.api_request'
   ifrost_doctrine_api_auth.encoder.lcobucci:
     class: Lexik\Bundle\JWTAuthenticationBundle\Encoder\LcobucciJWTEncoder
     arguments:
